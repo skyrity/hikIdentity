@@ -1,0 +1,21 @@
+program HikIdentitySys;
+
+
+
+uses
+  Vcl.Forms,
+  CameraController in 'CameraController.pas',
+  HCUsbController in 'HCUsbController.pas',
+  HCUsbSDK in 'HCUsbSDK.pas',
+  HikGlobalFunc in 'HikGlobalFunc.pas',
+  Test in 'Test.pas' {frmMain},
+  UsbCameraSDK in 'UsbCameraSDK.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TfrmMain, frmMain);
+  Application.Run;
+end.

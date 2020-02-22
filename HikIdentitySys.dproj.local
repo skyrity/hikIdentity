@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2020/01/16 17:33:22.000.493,=C:\Users\Administrator\Documents\RAD Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2020/01/16 17:33:57.000.238,C:\Users\Administrator\Documents\RAD Studio\Projects\WXFaceRegister.dproj=C:\Users\Administrator\Documents\RAD Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>2020/01/16 17:34:29.000.823,C:\Users\Administrator\Documents\RAD Studio\Projects\MainForm.pas=C:\Users\Administrator\Documents\RAD Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2020/01/16 17:34:29.000.823,C:\Users\Administrator\Documents\RAD Studio\Projects\MainForm.dfm=C:\Users\Administrator\Documents\RAD Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>2020/01/16 18:07:24.000.808,F:\Programs\DephiXE2\WXFaceRegist\MainForm.pas=C:\Users\Administrator\Documents\RAD Studio\Projects\MainForm.pas</Transaction>
+    <Transaction>2020/01/16 18:07:24.000.808,F:\Programs\DephiXE2\WXFaceRegist\MainForm.dfm=C:\Users\Administrator\Documents\RAD Studio\Projects\MainForm.dfm</Transaction>
+    <Transaction>2020/01/16 18:07:39.000.703,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=C:\Users\Administrator\Documents\RAD Studio\Projects\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/01/19 10:50:09.000.200,=F:\Programs\DephiXE2\WXFaceRegist\FaceRegister.pas</Transaction>
+    <Transaction>2020/01/19 10:50:29.000.990,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/01/19 10:50:42.000.909,=F:\Programs\DephiXE2\WXFaceRegist\Common.pas</Transaction>
+    <Transaction>2020/01/19 10:50:49.000.831,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/01/22 18:31:32.000.892,=F:\Programs\DephiXE2\WXFaceRegist\DataHelper.pas</Transaction>
+    <Transaction>2020/01/22 18:31:32.000.927,=F:\Programs\DephiXE2\WXFaceRegist\Ping.pas</Transaction>
+    <Transaction>2020/01/22 18:31:48.000.739,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/01/29 18:05:15.000.113,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/01/31 18:21:06.000.653,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/01/31 18:21:32.000.502,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/01 16:41:21.000.802,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/03 12:13:04.000.201,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/11 21:08:55.000.906,=F:\Programs\DephiXE2\WXFaceRegist\Win32\Debug\WXFaceRegisterini</Transaction>
+    <Transaction>2020/02/11 21:08:55.000.890,=F:\Programs\DephiXE2\WXFaceRegist\Win32\Debug\FaceRegisterini</Transaction>
+    <Transaction>2020/02/14 13:07:35.000.766,=F:\Programs\DephiXE2\WXFaceRegist\ConfigurateForm.pas</Transaction>
+    <Transaction>2020/02/14 13:19:24.000.922,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/15 19:59:29.000.568,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/17 11:16:58.000.193,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/17 11:44:05.000.821,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/18 10:40:38.000.439,F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\WXFaceRegist\WXFaceRegister.dproj</Transaction>
+    <Transaction>2020/02/19 12:18:18.000.510,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\ConfigurateForm.pas=</Transaction>
+    <Transaction>2020/02/19 12:18:18.000.649,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\MainForm.pas=</Transaction>
+    <Transaction>2020/02/19 12:18:18.000.521,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\DataHelper.pas=</Transaction>
+    <Transaction>2020/02/19 12:18:18.000.534,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\FaceRegister.pas=</Transaction>
+    <Transaction>2020/02/19 12:18:18.000.789,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\Ping.pas=</Transaction>
+    <Transaction>2020/02/19 12:18:18.000.476,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\Common.pas=</Transaction>
+    <Transaction>2020/02/19 12:18:33.000.664,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\Win32\Debug\FaceRegisterini=</Transaction>
+    <Transaction>2020/02/19 12:18:39.000.688,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\Win32\Debug\WXFaceRegisterini=</Transaction>
+    <Transaction>2020/02/19 12:19:03.000.607,F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\WXFaceRegister.dproj=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\HikIdentitySys.dproj</Transaction>
+    <Transaction>2020/02/19 12:22:25.000.292,=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\UsbCameraSDK.pas</Transaction>
+    <Transaction>2020/02/19 12:22:25.000.213,=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\HCUsbController.pas</Transaction>
+    <Transaction>2020/02/19 12:22:25.000.226,=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\HCUsbSDK.pas</Transaction>
+    <Transaction>2020/02/19 12:22:25.000.241,=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\HikGlobalFunc.pas</Transaction>
+    <Transaction>2020/02/19 12:22:25.000.199,=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\CameraController.pas</Transaction>
+    <Transaction>2020/02/19 12:22:25.000.277,=F:\Programs\DephiXE2\人证对比工具\WXFaceRegist\Test.pas</Transaction>
+    <Transaction>2020/02/19 14:26:48.000.160,F:\Programs\DephiXE2\人证对比工具\IdentitySys\HCUsbSDK.pas=</Transaction>
+    <Transaction>2020/02/19 14:26:48.000.135,F:\Programs\DephiXE2\人证对比工具\IdentitySys\HCUsbController.pas=</Transaction>
+    <Transaction>2020/02/19 15:36:00.000.994,=F:\Programs\DephiXE2\人证对比工具\IdentitySys\HCUsbController.pas</Transaction>
+    <Transaction>2020/02/19 15:36:01.000.019,=F:\Programs\DephiXE2\人证对比工具\IdentitySys\HCUsbSDK.pas</Transaction>
+    <Transaction>2020/02/19 15:36:36.000.799,F:\Programs\DephiXE2\人证对比工具\IdentitySys\UsbCameraSDK.pas=</Transaction>
+    <Transaction>2020/02/19 15:36:36.000.759,F:\Programs\DephiXE2\人证对比工具\IdentitySys\CameraController.pas=</Transaction>
+    <Transaction>2020/02/21 09:17:58.000.024,=F:\Programs\DephiXE2\人证对比工具\IdentitySys\Unit2.pas</Transaction>
+    <Transaction>2020/02/21 09:19:39.000.371,F:\Programs\DephiXE2\人证对比工具\IdentitySys\IdentityCardProc.pas=F:\Programs\DephiXE2\人证对比工具\IdentitySys\Unit2.pas</Transaction>
+    <Transaction>2020/02/21 10:50:32.000.764,F:\Programs\DephiXE2\人证对比工具\IdentitySys\HikIdentitySys.dproj=F:\Programs\DephiXE2\人证对比工具\IdentitySys\HikIdentitySys.dproj</Transaction>
+    <Transaction>2020/02/21 19:20:24.000.081,F:\Programs\DephiXE2\人证对比工具\IdentitySys\HikIdentitySys.dproj=F:\Programs\DephiXE2\人证对比工具\IdentitySys\HikIdentitySys.dproj</Transaction>
+    <Transaction>2020/02/22 10:55:54.505,F:\Programs\DephiXE2\人证对比工具\IdentitySys\HikIdentitySys.dproj=F:\Programs\DephiXE2\人证对比工具\IdentitySys\HikIdentitySys.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

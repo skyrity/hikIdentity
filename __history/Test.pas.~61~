@@ -1,0 +1,227 @@
+unit Test;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,HCUsbController,RegularExpressions,
+  Vcl.ComCtrls,Vcl.Imaging.jpeg,HCUsbSDK;
+
+type
+  TfrmMain = class(TForm)
+    Panel1: TPanel;
+    Panel2: TPanel;
+    pal_CameraArea: TPanel;
+    btn_Start: TButton;
+    btn_CatchImg: TButton;
+    Panel3: TPanel;
+    btn_IdReader: TButton;
+    REditDebug: TRichEdit;
+    Panel4: TPanel;
+    Panel5: TPanel;
+    imgPhoto: TImage;
+    btn_BmpRead: TButton;
+    btn_Check: TButton;
+    procedure btn_StartClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure btn_IdReaderClick(Sender: TObject);
+    procedure btn_BmpReadClick(Sender: TObject);
+    procedure btn_CheckClick(Sender: TObject);
+  private
+    { Private declarations }
+//    FCamera:TUsbCamera;
+    FUSB:THCUsb;
+    userId:Integer;
+    procedure DebugPrint(StrText: String; Color: TColor);
+
+    procedure ShowImage(path:String);
+  public
+    { Public declarations }
+  end;
+
+var
+  frmMain: TfrmMain;
+
+implementation
+
+{$R *.dfm}
+procedure TfrmMain.DebugPrint(StrText:String;Color:TColor);
+var
+  A: TArray<string>;
+  i:integer;
+begin
+  REditDebug.SelAttributes.Color := Color;
+//  REditDebug.Lines.Add(StrText);
+  A :=  TRegEx.Split(StrText,';');//SplitString(StrText,';');
+  for i := 0 to Length(A) -1 do
+  begin
+    REditDebug.Lines.Add(A[i]);
+  end;
+end;
+procedure TfrmMain.ShowImage(path:String);
+Var
+    imgStream: TMemoryStream;
+    jpg:TJpegImage;
+    Buffer:Word;
+begin
+    imgStream:= TMemoryStream.Create;
+    jpg:=TJpegImage.Create;
+    try
+        imgStream.LoadFromFile(path);
+        imgStream.Position:=0;
+        imgStream.ReadBuffer(Buffer,2);
+        if(Buffer=$D8FF) or (Buffer=$4947) then
+        begin
+            imgStream.Position := 0;
+            jpg.LoadFromStream(imgStream);
+            self.imgPhoto.Picture.Bitmap.Assign(jpg);
+        end
+        else if(Buffer=$4D42)then
+        begin
+            imgStream.Position := 0;
+            self.imgPhoto.Picture.Bitmap.LoadFromStream(imgStream);
+        end
+        else  DebugPrint('获取图片失败！',clRed);
+    finally
+        imgStream.Free;
+        jpg.Free;
+    end;
+end;
+procedure TfrmMain.btn_BmpReadClick(Sender: TObject);
+Var
+//    path:String;
+    item:TCardInfo;
+    strErr:String;
+begin
+//    item := TCardInfo.Create;
+     if(userId > 0) then
+     begin
+          REditDebug.Clear;
+     end
+     else
+     begin
+        FUSB.UserName := 'admin';
+        FUSB.PassWord := '12345';
+        FUSB.SerialNum := 'E05261066';
+        FUSB.VID := 1155;
+        FUSB.PID := 22352;
+        FUSB.TimeOut := 5000;
+        FUSB.GetEnumDevice(nil);
+        userId := FUSB.Usb_Login;
+        DebugPrint('登录成功：用户Id=' + IntToStr(FUSB.UserId) + ';设备名称=' + FUSB.DeviceName + ';设备序列号=' + FUSB.SerialNum + ';软件版本=' + IntToStr(FUSB.SoftwareVersion),clGreen);
+     end;
+//    path := ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER + '\' + IMAGE_FILE;
+////    self.imgPhoto.Picture.Bitmap.LoadFromFile(path);
+//    DebugPrint('身份证图片地址=' + path,clGreen);
+//    ShowImage(path);
+    strErr:='';
+    item:= FUSB.ActivateCard(strErr);
+    if not(item = nil) then
+    begin
+        DebugPrint('卡协议类型=' + item.Protocol,clGreen);
+        DebugPrint('序列号长度=' + IntToStr(item.SerialLen),clGreen);
+        DebugPrint('序列号=' + item.SerialNum,clGreen);
+        DebugPrint('选择确定长度=' + IntToStr(item.SelectVerifyLen),clGreen);
+        DebugPrint('选择确定=' + item.SelectVerify,clGreen);
+    end
+    else
+    begin
+        DebugPrint('激活卡失败：' + strErr,clRed);
+    end;
+end;
+
+procedure TfrmMain.btn_CheckClick(Sender: TObject);
+Var
+    strErr:String;
+begin
+    if(userId > 0) then
+     begin
+          REditDebug.Clear;
+     end
+     else
+     begin
+        FUSB.UserName := 'admin';
+        FUSB.PassWord := '12345';
+        FUSB.SerialNum := 'E05261066';
+        FUSB.VID := 1155;
+        FUSB.PID := 22352;
+        FUSB.TimeOut := 5000;
+        FUSB.GetEnumDevice(nil);
+        userId := FUSB.Usb_Login;
+        DebugPrint('登录成功：用户Id=' + IntToStr(FUSB.UserId) + ';设备名称=' + FUSB.DeviceName + ';设备序列号=' + FUSB.SerialNum + ';软件版本=' + IntToStr(FUSB.SoftwareVersion),clGreen);
+     end;
+     strErr:='';
+     if(FUSB.IsIdentityCard(strErr)) then DebugPrint('检测到卡片：' + strErr,clGreen)
+     else DebugPrint('未检测到卡片：' + strErr,clRed);
+end;
+
+procedure TfrmMain.btn_IdReaderClick(Sender: TObject);
+Var
+//    flag:Boolean;
+    strErr,path:String;
+begin
+    strErr := '';
+    FUSB.UserName := 'admin';
+    FUSB.PassWord := '12345';
+    FUSB.SerialNum := 'E05261066';
+    FUSB.VID := 1155;
+    FUSB.PID := 22352;
+    FUSB.TimeOut := 5000;
+    if(userId > 0) then
+    begin
+        FUSB.IdCard.Free;
+        FUSB.IdCard.Create;
+        REditDebug.Clear;
+    end
+    else
+    begin
+        FUSB.GetEnumDevice(nil);
+        userId := FUSB.Usb_Login;
+        DebugPrint('登录成功：用户Id=' + IntToStr(FUSB.UserId) + ';设备名称=' + FUSB.DeviceName + ';设备序列号=' + FUSB.SerialNum + ';软件版本=' + IntToStr(FUSB.SoftwareVersion),clGreen);
+    end;
+//
+    if(userId > 0) then
+    begin
+        if not(FUSB.GetIdentityInfo(strErr)) then
+        begin
+            DebugPrint('获取身份证信息失败：' + strErr,clRed);
+        end
+        else
+        begin
+            DebugPrint('身份证文字=' + FUSB.m_WordInfo + ';图片=' + FUSB.m_PicInfo + ';指纹=' + FUSB.m_FingerPrintInfo,clGreen);
+            if not(FUSB.IdCard.IsPicDone) then
+            begin
+                FUSB.IdCard.IDpictureProcess;
+            end;
+            path := FUSB.IdCard.PicAddr;
+            DebugPrint('身份证图片地址=' + path,clGreen);
+            ShowImage(path);
+            DebugPrint('身份证追加地址=' + FUSB.GetAddAddress(strErr),clGreen);
+        end;
+    end
+    else
+    begin
+        DebugPrint('登录失败！',clRed);
+    end;
+
+end;
+
+procedure TfrmMain.btn_StartClick(Sender: TObject);
+Var
+//    flag : Boolean;
+    strError : String;
+begin
+    strError := '';
+//    flag := FCamera.EnumDeviceStart(Pointer(self.pal_CameraArea.Handle),strError);
+end;
+
+
+procedure TfrmMain.FormCreate(Sender: TObject);
+begin
+//    FCamera:= TUsbCamera.Create;
+    FUSB := THCUsb.Create;
+    userId:=0;
+    DebugPrint(FUSB.GetSdkVerSion,clBlue);
+end;
+
+end.

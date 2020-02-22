@@ -1,0 +1,425 @@
+unit FaceRegister;
+
+interface
+Uses
+    SysUtils,IdHTTP,IdSSLOpenSSL,Classes,Common,DBXJSON,System.RegularExpressions,Generics.Collections,DateUtils,idURI;
+
+Type
+ TFaceInfo = Class
+    private
+      FId:Integer;
+      FName:String;
+      FTelNo:String;
+      FCard:String;
+      FImgUrl:String;
+      FImage:TMemoryStream;
+      FState:Integer;
+      FStateName:String;
+      FApplyTime:TDateTime;
+      FAccessPower:String;
+      procedure ConvertState();
+    public
+        constructor Create(); overload;
+        property Id:Integer read FId write FId;
+        property Name:String read FName write FName;
+        property TelNo:String read FTelNo write FTelNo;
+        property Card:String read FCard write FCard;
+        property ImgUrl:String read FImgUrl write FImgUrl;
+        property Image:TMemoryStream read FImage write FImage;
+        property State:Integer read FState write FState;
+        property StateName:String read FStateName write FStateName;
+        property ApplyTime:TDateTime read FApplyTime write FApplyTime;
+        property AccessPower:String read FAccessPower write FAccessPower;
+        function ToString():string; overload;
+    End;
+
+TServiceBase = class
+    private
+        FIsLogin:Boolean;
+        FAccount:String;
+        FPassword:String;
+        FCookie:String;
+        FToken:String;
+        FMsg:String;
+        FCode:Integer;
+
+        FKeyWord:String;
+        FPageSize:Integer;
+        FCurrentPage:Integer;
+        FTotalPage:Integer;
+        FTotalRecord: Integer;
+        FState:Integer;
+        //http提交数据
+        //AURL:访问的接口地址
+        //AParam:提交的参数
+        //Result:True成功;False失败
+        function LoginPost(Const AURL,AParam:String):Boolean;
+        function JsonToObjects(strJson:String):TObjectList<TFaceInfo>;
+
+    protected
+        property Account:String read FAccount write FAccount;
+        property Password:String read FPassword write FPassword;
+    public
+        constructor Create(); overload;
+        property IsLogin:Boolean read FIsLogin write FIsLogin;
+        property Cookie:String read FCookie write FCookie;
+        property Token:String read FToken write FToken;
+        property Msg:String read FMsg write FMsg;
+        property Code:Integer read FCode write FCode;
+
+        property KeyWord:String read FKeyWord write FKeyWord;
+        property PageSize:Integer read FPageSize write FPageSize;
+        property CurrentPage:Integer read FCurrentPage write FCurrentPage;
+        property TotalPage:Integer read FTotalPage write FTotalPage;
+        property TotalRecord:Integer read FTotalRecord write FTotalRecord;
+        property State:Integer read FState write FState;
+
+        function Login(userName,password:String): Boolean;
+        procedure Logout();
+        function GetFaceList():TObjectList<TFaceInfo>; overload;
+        function GetFaceList(state,pageSize,pageNum :Integer):TObjectList<TFaceInfo>; overload;
+
+        function FaceApprove(ids:String;state:Integer = 2):Boolean;
+end;
+
+TAccessInfo=class
+    private
+        FNum:INTEGER;
+        FName:STRING;
+    public
+        property Num:INTEGER read FNum write FNum;
+        property Name:STRING read FName write FName;
+end;
+
+implementation
+{$REGION 'TServiceBase'}
+    constructor TServiceBase.Create();
+    begin
+      inherited Create();
+      FAccount:='admin';
+      FPassword:='admin';
+      FCookie:='';
+      FToken:='';
+      FMsg:='';
+      FCode := 0;
+      FIsLogin:=false;
+
+      FKeyWord:='';
+      FPageSize:= 20;
+      FCurrentPage:=1;
+      FTotalPage:=0;
+      FTotalRecord:= 0;
+      FState:=-1;
+    end;
+
+    function TServiceBase.LoginPost(Const AURL,AParam:String):Boolean;
+    var
+        mIdHTTP:TIdcustomHTTP;
+        sRevStrData,sCookie:String;
+        SendStream,ResponseStream: TStringStream;
+        LHandler: TIdSSLIOHandlerSocketOpenSSL;
+        JsonObj,SubObj: TJSONObject;
+        JPair : TJSONPair;
+//        arr: TArray<string>;
+    begin
+        if(Length(AURL)<=0)Then
+        begin
+          Result:=False;
+          Exit;
+        end;
+        mIdHTTP:=TIdhttp.Create(nil);
+        SendStream:=TStringStream.Create(AParam);
+        LHandler:=  TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+        ResponseStream := TStringstream.Create('',TEncoding.UTF8);
+//        JsonObj := nil;
+        try
+            mIdHTTP := TIdHTTP.Create(nil);
+            mIdHTTP.IOHandler := LHandler;
+            mIdHTTP.HandleRedirects := true;
+            mIdHTTP.ReadTimeout := 5000;
+            mIdHTTP.Request.ContentType := 'application/x-www-form-urlencoded;charset=utf-8';
+            try
+              mIdHTTP.Post(TIdURI.URLEncode(AURL),SendStream,ResponseStream);
+              sRevStrData := ResponseStream.DataString;
+              sCookie := mIdHTTP.Response.RawHeaders.Values['Set-Cookie'];//UTF8Decode(mIdHTTP.Response.RawHeaders.Values['Set-Cookie']) ;
+              if(Length(sCookie)>0) then
+              begin
+                self.Cookie :=  TRegEx.split(sCookie,';')[0] ;
+              end;
+              JsonObj := TJSONObject.ParseJSONValue(sRevStrData) as TJSONObject;
+              JPair :=  JsonObj.Get('result_code');
+              self.Code :=  StrToIntDef(JPair.JsonValue.Value,0);
+              if (mIdHTTP.ResponseCode=200) and (JPair.JsonValue.Value = '0') then
+              begin
+                JPair :=  JsonObj.Get('result_data');
+                SubObj := TJSONObject.ParseJSONValue(JPair.JsonValue.ToString) as TJSONObject;
+                self.Token := SubObj.Get('accessToken').JsonValue.Value;
+                self.Msg := JsonObj.Get('result_msg').JsonValue.Value;
+                Result:= True;
+              end
+              else
+                Result := False;
+            except
+              Result := false;
+            end;
+         finally
+            mIdHTTP.Free;
+            SendStream.Free;
+         end;
+    end;
+
+    function TServiceBase.Login(userName,password:String): Boolean;
+    Var
+      url,params:String;
+    begin
+      if(Length(userName)<=0) then
+      begin
+        result := false;
+        Exit;
+      end;
+      if(Length(password)<=0) then
+      begin
+        result := false;
+        Exit;
+      end;
+      self.Account := userName;
+      self.Password := password;
+      url :=  Common.Replacing(API_LOGIN,'%host%',HOST);
+      params :=  Common.Replacing(PARAMS_LOGIN,'%name%',userName);
+      params :=  Common.Replacing(params,'%password%',password);
+      result:=  LoginPost(url,params);
+    end;
+
+    procedure TServiceBase.Logout();
+     Var
+      url,params,res:String;
+      flag:Boolean;
+      JsonObj: TJSONObject;
+    begin
+        url :=  Common.Replacing(API_LOGOUT,'%host%',HOST);
+        params :=  Common.Replacing(PARAMS_LOGOUT,'%accessToken%',self.Token);
+        res := '';
+        flag := Common.HttpPost(url,params,self.Cookie,res);
+        if(flag) then
+        begin
+            JsonObj := TJSONObject.ParseJSONValue(res) as TJSONObject;
+            self.Code :=  StrToIntDef(JsonObj.Get('result_code').JsonValue.Value,0);
+            self.Msg := JsonObj.Get('result_msg').JsonValue.Value;
+            self.IsLogin := false;
+        end;
+    end;
+
+    function TServiceBase.FaceApprove(ids:String;state:Integer = 2):Boolean;
+    Var
+      url,params,res:String;
+      flag:Boolean;
+      JsonObj: TJSONObject;
+    begin
+        url :=  Common.Replacing(API_APPROVESTATE,'%host%',HOST);
+        params :=  Common.Replacing(PARAMS_APPROVESTATE,'%accessToken%',self.Token);
+        params :=  Common.Replacing(params,'%ids%',ids);
+        params :=  Common.Replacing(params,'%isPass%',IntToStr(state));
+        res := '';
+        flag := Common.HttpPost(url,params,self.Cookie,res);
+        if(flag) then
+        begin
+            JsonObj := TJSONObject.ParseJSONValue(res) as TJSONObject;
+            self.Code :=  StrToIntDef(JsonObj.Get('result_code').JsonValue.Value,0);
+            self.Msg := JsonObj.Get('result_msg').JsonValue.Value;
+            if self.Code = 0 then flag := true
+            else flag := false;
+        end;
+        result := flag;
+    end;
+
+    function TServiceBase.JsonToObjects(strJson:String):TObjectList<TFaceInfo>;
+    Var
+      list: TObjectList<TFaceInfo>;
+      item:  TFaceInfo;
+      JsonObj,SubObj: TJSONObject;
+      JPair : TJSONPair;
+      JArray: TJSONArray;
+      temp:TJSONValue;
+      tempStamp:Int64;
+    begin
+        list:= TObjectList<TFaceInfo>.Create();
+        JsonObj := TJSONObject.ParseJSONValue(strJson) as TJSONObject;
+        self.Code :=  StrToIntDef(JsonObj.Get('result_code').JsonValue.Value,0);
+        self.Msg := JsonObj.Get('result_msg').JsonValue.Value;
+        case self.Code of
+            0:
+              begin
+                  JPair :=  JsonObj.Get('result_data');
+                  SubObj := TJSONObject.ParseJSONValue(JPair.JsonValue.ToString) as TJSONObject;
+                  self.TotalPage :=  StrToIntDef(SubObj.Get('totalPage').JsonValue.Value,0);
+                  self.TotalRecord := StrToIntDef(SubObj.Get('totalRecord').JsonValue.Value,0);
+                  JPair :=  SubObj.Get('dataList');
+                  JArray :=  JPair.JsonValue AS TJSONArray;
+                  for temp in JArray  do
+                  begin
+                       SubObj := TJSONObject.ParseJSONValue( temp.ToString) as TJSONObject;
+                       item := TFaceInfo.Create;
+                       item.Id := StrToIntDef(SubObj.Get('id').JsonValue.Value,0);
+                       item.Name :=  SubObj.Get('name').JsonValue.Value ;
+                       item.TelNo :=  SubObj.Get('telNo').JsonValue.Value ;
+                       item.Card :=  SubObj.Get('cardNo').JsonValue.Value ;
+                       item.ImgUrl := SubObj.Get('imgUrl').JsonValue.Value ;
+                       item.State := StrToIntDef(SubObj.Get('state').JsonValue.Value,0);
+                       SubObj := TJSONObject.ParseJSONValue(SubObj.Get('applyTime').JsonValue.ToString) as TJSONObject;
+                       tempStamp:=  (StrToInt64(SubObj.Get('time').JsonValue.Value)) div 1000;
+                       item.ApplyTime:=UnixToDateTime(tempStamp);
+                       item.ConvertState();
+                       list.Add(item);
+                  end;
+                  Common.WorkLogRecord('中间服务器远程数据查询成功！',Common.LOG_SEARCH);
+              end;
+            -3:
+              begin
+                  Common.WorkLogRecord('中间服务器远程数据查询失败，请确认数据是否存在或传入参数是否异常！',Common.LOG_SEARCH);
+              end;
+            else
+                Common.WorkLogRecord('中间服务器远程数据查询失败！Return Code=' + IntToStr(self.Code),Common.LOG_SEARCH);
+        end;
+        result:=list;
+    end;
+
+    function TServiceBase.GetFaceList():TObjectList<TFaceInfo>;
+    Var
+      list: TObjectList<TFaceInfo>;
+      url,params,res:String;
+      flag:Boolean;
+    begin
+      list:= TObjectList<TFaceInfo>.Create();
+      try
+          url :=  Common.Replacing(API_GETFACE,'%host%',HOST);
+          params :=  Common.Replacing(PARAMS_GETFACE,'%accessToken%',self.Token);
+          params :=  Common.Replacing(params,'%state%',IntToStr(self.State));
+          params :=  Common.Replacing(params,'%fields%',self.KeyWord);
+          params :=  Common.Replacing(params,'%pageSize%',IntToStr(self.PageSize));
+          params :=  Common.Replacing(params,'%pageNum%',IntToStr(self.CurrentPage));
+          res := '';
+          Common.WorkLogRecord('查询参数Params=' + res);
+          flag := Common.HttpPost(url,params,self.Cookie,res);
+          if(flag) then
+          begin
+              list:=  JsonToObjects(res);
+          end;
+      finally
+          result:=  list;
+      end;
+    end;
+
+    function TServiceBase.GetFaceList(state,pageSize,pageNum :Integer):TObjectList<TFaceInfo>;
+    Var
+      list: TObjectList<TFaceInfo>;
+//      item:  TFaceInfo;
+      url,params,res:String;
+      flag:Boolean;
+//      JsonObj,SubObj: TJSONObject;
+//      JPair : TJSONPair;
+//      JArray: TJSONArray;
+//      temp:TJSONValue;
+//      tempStamp:Int64;
+    begin
+      list:= TObjectList<TFaceInfo>.Create();
+      try
+        try
+            url :=  Common.Replacing(API_GETFACE,'%host%',HOST);
+            params :=  Common.Replacing(PARAMS_GETFACE,'%accessToken%',self.Token);
+            params :=  Common.Replacing(params,'%state%',IntToStr(state));
+            params :=  Common.Replacing(params,'%fields%','');
+            params :=  Common.Replacing(params,'%pageSize%',IntToStr(pageSize));
+            params :=  Common.Replacing(params,'%pageNum%',IntToStr(pageNum));
+            res := '';
+            Common.WorkLogRecord('查询参数Params=' + res);
+            flag := Common.HttpPost(url,params,self.Cookie,res);
+            if(flag) then
+            begin
+                list :=  JsonToObjects(res);
+//               JsonObj := TJSONObject.ParseJSONValue(res) as TJSONObject;
+//               self.Code :=  StrToIntDef(JsonObj.Get('result_code').JsonValue.Value,0);
+//               self.Msg := JsonObj.Get('result_msg').JsonValue.Value;
+//               if self.Code = 0 then
+//               begin
+//                  JPair :=  JsonObj.Get('result_data');
+//                  SubObj := TJSONObject.ParseJSONValue(JPair.JsonValue.ToString) as TJSONObject;
+//                  self.TotalPage :=  StrToIntDef(SubObj.Get('totalPage').JsonValue.Value,0);
+//                  self.TotalRecord := StrToIntDef(SubObj.Get('totalRecord').JsonValue.Value,0);
+//                  JPair :=  SubObj.Get('dataList');
+//                  JArray :=  JPair.JsonValue AS TJSONArray;
+//                  for temp in JArray  do
+//                  begin
+//                     SubObj := TJSONObject.ParseJSONValue( temp.ToString) as TJSONObject;
+//                     item := TFaceInfo.Create;
+//                     item.Id := StrToIntDef(SubObj.Get('id').JsonValue.Value,0);
+//                     item.Name :=  SubObj.Get('name').JsonValue.Value ;
+//                     item.TelNo :=  SubObj.Get('telNo').JsonValue.Value ;
+//                     item.Card :=  SubObj.Get('cardNo').JsonValue.Value ;
+//                     item.ImgUrl := SubObj.Get('imgUrl').JsonValue.Value ;
+//                     item.State := StrToIntDef(SubObj.Get('state').JsonValue.Value,0);
+//                     SubObj := TJSONObject.ParseJSONValue(SubObj.Get('applyTime').JsonValue.ToString) as TJSONObject;
+//                     tempStamp:=  (StrToInt64(SubObj.Get('time').JsonValue.Value)) div 1000;
+//                     item.ApplyTime:=UnixToDateTime(tempStamp);
+//                     item.ConvertState();
+//                     list.Add(item);
+//                  end;
+//               end
+            end;
+        finally
+            result:=  list;
+        end;
+      except on e:Exception do
+          begin
+              result:=  list;
+              Common.WorkLogRecord('中间服务器远程数据查询异常，请确认登陆链接状态是否正常！',Common.LOG_SEARCH);
+           end;
+      end;
+    end;
+{$ENDREGION}
+
+{$REGION 'TFaceInfo'}
+    constructor TFaceInfo.Create();
+    begin
+      inherited Create();
+      FId:=0;
+      FName:='';
+      FTelNo:='';
+      FCard:='';
+      FImgUrl:='';
+      FState:=0;
+      FApplyTime:= Now();
+      FAccessPower:='';
+      FImage:=TMemoryStream.Create;
+    end;
+    procedure TFaceInfo.ConvertState();
+    begin
+        case self.State of
+          0:  self.StateName:= '未处理';
+          1: self.StateName:= '已审核';
+          2: self.StateName:= '已处理';
+          3: self.StateName:= '已拒绝';
+          else  self.StateName:= '未知';
+       end;
+    end;
+    function TFaceInfo.ToString():string;
+    var
+      res:String;
+    begin
+       res:= '';
+       res:= res + '序号：' + IntToStr(self.Id) + #13#10  ;
+       res:= res + '名称：' + self.Name + #13#10  ;
+       res:= res + '手机：' + self.TelNo + #13#10  ;
+       res:= res + '图片：' + self.ImgUrl + #13#10  ;
+       case self.State of
+          0:  res:= res + '状态：未处理' + #13#10  ;
+          1: res:= res + '状态：已审核' + #13#10  ;
+          2: res:= res + '状态：已处理' + #13#10  ;
+          3: res:= res + '状态：已拒绝' + #13#10  ;
+          else  res:= res + '状态：未知' + #13#10  ;
+       end;
+       res:= res + '卡号：' + self.Card ;
+    result := res;
+    end;
+{$ENDREGION}
+
+end.

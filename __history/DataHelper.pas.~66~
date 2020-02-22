@@ -1,0 +1,413 @@
+unit DataHelper;
+
+interface
+uses
+  System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,IniFiles,Types,Dialogs,Ping,
+  FaceRegister,Generics.Collections,Variants,System.RegularExpressions;
+
+Type
+    TDBBaseInfo = Class
+        private
+          DBName:string;
+          DBUser:string;
+          DBIP:string;
+          DBPassword:string;
+          Port:Integer;
+          DeviceType:Integer;
+          ADO_Conn:TADOConnection;
+          ADO_Query: TADOQuery;
+          ADO_Proc:TADOStoredProc;
+          { Private declarations }
+          function GetConnectionStr:string;overload;
+          function GetConnectionStr(DBServerIP,DBName,DBUser,DBPassword:string): string;overload;
+          function PingIP(IPAddr: string): Boolean;
+          function GetDBServerIP: string;
+          //数据库链接
+          function OpenConn(ConnStr:string;Var Error:string;ConnTimeout:Integer = 5):Boolean;
+          //事务操作
+//          function AdoTransBegin(Var Error:string):Boolean;
+//          function AdoTransRollBack(Var Error:string):Boolean;
+//          function AdoTransCommit(Var Error:string):Boolean;
+        public
+          constructor Create(); overload;
+          //数据库链接操作
+          function DBConnect(Var Error:string): Boolean; overload;
+          function DBConnect(DBServerIP, DBName, DBUser, DBPassword: string; Var Error:string): Boolean;overload;
+
+          procedure GetFaceList(list:TList<TFaceInfo>);
+          function GetFaceImg(pNo:String):TMemoryStream;
+          function SaveFaceInfo(item:TFaceInfo):Boolean;
+          function GetAccessList():TList<TAccessInfo>;
+    End;
+
+implementation
+
+constructor TDBBaseInfo.Create();
+begin
+      inherited Create();
+      DBName:='';
+      DBUser:='';
+      DBIP:='';
+      DBPassword:='';
+      Port := 0;
+      DeviceType:= 0;
+      ADO_Conn:= TADOConnection.Create(nil);
+      ADO_Conn.LoginPrompt:=False;
+      ADO_Query:= TADOQuery.Create(nil);
+      ADO_Query.Connection :=  ADO_Conn;
+      ADO_Proc:= TADOStoredProc.Create(nil);
+      ADO_Proc.Connection :=  ADO_Conn;
+end;
+
+//ini文件获取数据库链接字符串信息
+function TDBBaseInfo.GetConnectionStr:string;
+var
+    ConnectionString:string;
+//    SoftKey:Word;
+    IniFile:TIniFile;
+//    Key:string;
+begin
+    Result:='';
+//    Key:=   ChangeFileExt(ParamStr(0),'ini');
+    IniFile:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+    try
+        ConnectionString:=IniFile.ReadString('System','ConnectionString','');
+        if ConnectionString='' then
+        begin
+          ConnectionString:='Provider=SQLOLEDB.1;Persist Security Info=true;';
+          IniFile.WriteString('System','ConnectionString',ConnectionString);
+        end;
+
+        self.DBIP:=IniFile.ReadString('System','ServerIP','');
+        self.DBName:=IniFile.ReadString('System','DBName','');
+        self.DBUser:=IniFile.ReadString('System','User','');
+//        SoftKey:=IniFile.ReadInteger('System','SoftKey',0);
+        self.DBPassword:=IniFile.ReadString('System','Password','');
+        if (self.DBIP = '') or (self.DBName = '') or (self.DBUser = '') then  Exit;
+        Result:=ConnectionString
+                + 'Initial Catalog=' + self.DBName + ';'
+                + 'User ID=' + self.DBUser + ';'
+                + 'Password=' + self.DBPassword + ';'
+                + 'Data Source=' + self.DBIP ;
+    finally
+        IniFile.free;
+    end;
+end;
+
+//接口参数指定数据库信息，组装数据库链接参数
+function TDBBaseInfo.GetConnectionStr(DBServerIP,DBName,DBUser,DBPassword:string):string;
+var
+    ConnectionString:string;
+    IniFile:TIniFile;
+begin
+    Result:='';
+    IniFile:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+    try
+        ConnectionString:=IniFile.ReadString('System','ConnectionString','');
+        if ConnectionString='' then
+        begin
+            ConnectionString:='Provider=SQLOLEDB.1;Persist Security Info=true;';
+            IniFile.WriteString('System','ConnectionString',ConnectionString);
+        end;
+
+        if (DBServerIP = '') or (DBName = '') or (DBUser = '') then  Exit;
+        Result:=ConnectionString
+                + 'Initial Catalog=' + DBName + ';'
+                + 'User ID=' + DBUser + ';'
+                + 'Password=' + DBPassword + ';'
+                + 'Data Source=' + DBServerIP ;
+    finally
+        IniFile.free;
+    end;
+end;
+
+//获取ini文件指定数据库IP地址
+function TDBBaseInfo.GetDBServerIP:string;
+var
+    IniFile:TIniFile;
+begin
+    IniFile:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+    try
+        Result:=IniFile.ReadString('System','ServerIP','');
+     finally
+        IniFile.free;
+     end;
+end;
+
+//通过Ping命令确认IP地址是否正确
+function TDBBaseInfo.PingIP(IPAddr:string):Boolean;
+var
+    Pingcls:Tping;
+begin
+    Pingcls:=Tping.Create;
+    try
+      Result:=Pingcls.pingSQL(IPAddr);
+    finally
+      Pingcls.Free;
+    end;
+end;
+
+function TDBBaseInfo.OpenConn(ConnStr:string;Var Error:string;ConnTimeout:Integer = 5):Boolean;
+Begin
+   Error:='';
+   try
+      Result := false;
+      if PingIP(GetDBServerIP) then
+      begin
+          ADO_Conn.close;
+          ADO_Conn.ConnectionString:=ConnStr;
+          ADO_Conn.ConnectionTimeout:=5;
+          ADO_Conn.Open;
+          if (ADO_Conn.Connected) then Result := true
+          else
+          begin
+              Error:='数据库链接失败！';
+              Result := false;
+          end;
+      end;
+    except
+      on e:exception do
+      begin
+          Error:=E.Message;
+          Result := false;
+      end;
+    end;
+End;
+
+//打开数据库链接
+function TDBBaseInfo.DBConnect(Var Error:string): Boolean;
+var
+    ConnectStr:string;
+begin
+    Error:='';
+    Result := false;
+    ConnectStr:=GetConnectionStr;
+    if ConnectStr='' then
+    begin
+        Error:= '未获取到正确的数据库链接参数!';
+        Exit;
+    end;
+    Result := OpenConn(ConnectStr,Error,5);
+end;
+//打开数据库链接
+function TDBBaseInfo.DBConnect(DBServerIP,DBName,DBUser,DBPassword:string;Var Error:string): Boolean;
+var
+    ConnectStr:string;
+begin
+    Error:='';
+    Result := false;
+    ConnectStr:=GetConnectionStr(DBServerIP,DBName,DBUser,DBPassword);
+    if ConnectStr='' then Exit;
+    Result := OpenConn(ConnectStr,Error,5);
+end;
+
+ //事务操作
+//function TDBBaseInfo.AdoTransBegin(Var Error:string):Boolean;
+//Var
+//    iState:Integer;
+//begin
+//    Error:='';
+//    result:=false;
+//    try
+//        iState:=self.ADO_Conn.BeginTrans;
+//        if iState > 0 then
+//            result:=true;
+//    except
+//        on e:Exception do
+//        begin
+//            Error:= e.Message;
+//            result := false;
+//        end;
+//    end;
+//end;
+//function TDBBaseInfo.AdoTransRollBack(Var Error:string):Boolean;
+////Var
+////    iState:Integer;
+//begin
+//    Error:='';
+//    try
+//        self.ADO_Conn.RollbackTrans;
+//        result:=true;
+//    except
+//        on e:Exception do
+//        begin
+//            Error:= e.Message;
+//            result := false;
+//        end;
+//
+//    end;
+//end;
+//
+//function TDBBaseInfo.AdoTransCommit(Var Error:string):Boolean;
+//begin
+//    Error:='';
+//    try
+//        self.ADO_Conn.CommitTrans;
+//        result:=true;
+//     except
+//        on e:Exception do
+//        begin
+//            Error:= e.Message;
+//            result := false;
+//        end;
+//    end;
+//end;
+
+procedure TDBBaseInfo.GetFaceList(list:TList<TFaceInfo>);
+var
+    item:TFaceInfo;
+begin
+    with self.ADO_Query do
+    begin
+        Close;
+        SQL.Clear;
+        SQL.Text := 'SELECT * FROM [dbo].[View_CardInfo]';
+        Open;
+        while not Eof do
+        begin
+            item:= TFaceInfo.Create;
+            item.Id := StrToInt(FieldByName('CardID').AsString);
+            item.Name := FieldByName('UserName').AsString;
+            item.TelNo := FieldByName('PersonNO').AsString;
+            item.Card := FieldByName('CardID').AsString;
+            TBlobField(FieldByName('Photo')).SaveToStream(item.Image); //FieldByName('Photo').AsBytes;
+            item.State := 2;
+            list.Add(item);
+            Next;
+        end;
+    end;
+end;
+
+function TDBBaseInfo.GetFaceImg(pNo:String):TMemoryStream;
+var
+    imgStream:TMemoryStream;
+begin
+    imgStream := TMemoryStream.Create;
+    with self.ADO_Query do
+    begin
+        Close;
+        ParamCheck:=True;
+        PrePared:=True;
+        SQL.Clear;
+        SQL.Add('SELECT PersonNO,Photo FROM UserInfo WHERE PersonNO=:PersonNO');
+//        Parameters.Clear;
+//        Parameters.CreateParameter('@PersonNO',ftString,pdInput,128,'');
+        Parameters.ParamByName('PersonNO').Value :=pNo;
+        Open;
+        if not Eof then
+        begin
+//          imgStream := CreateBlobStream(FieldByName('Photo'), bmRead);
+          TBlobField(FieldByName('Photo')).SaveToStream(imgStream);
+        end;
+    end;
+    result := imgStream;
+end;
+
+function TDBBaseInfo.GetAccessList():TList<TAccessInfo>;
+var
+    list:TList<TAccessInfo>;
+    item:TAccessInfo;
+begin
+    list:= TList<TAccessInfo>.Create;
+    with self.ADO_Query do
+    begin
+        Close;
+        SQL.Clear;
+        SQL.Add('SELECT A.RecNum,O.Name FROM AccessLevel A INNER JOIN [Object] O ON A.RecNum = O.RecNum WHERE O.IsActive >= 0');
+        Open;
+        while not Eof do
+        begin
+            item := TAccessInfo.Create;
+            item.Num := StrToInt(FieldByName('RecNum').AsString);
+            item.Name := FieldByName('Name').AsString;
+            list.Add(item);
+            Next;
+        end;
+    end;
+    Result:=list;
+end;
+
+function TDBBaseInfo.SaveFaceInfo(item:TFaceInfo):Boolean;
+Var
+    res:Integer;
+begin
+    try
+        result := false;
+        if not (item = nil) then
+        begin
+            with self.ADO_Proc do
+            begin              
+//                ProcedureName:='sp_DownLoad_FaceInfo';
+//                Parameters.Clear;          
+//                Parameters.CreateParameter('@RETURN_VALUE',ftInteger,pdReturnValue,4,-1);
+//                Parameters.CreateParameter('@Name',ftString,pdInput,30,''); 
+//                Parameters.CreateParameter('@OpenId',ftString,pdInput,200,'');   
+//                Parameters.CreateParameter('@TelNO',ftString,pdInput,20,'');
+//                Parameters.CreateParameter('@CardNo',ftLargeint,pdInput,8,0); 
+//                Parameters.CreateParameter('@Photo',ftBlob,pdInput,0,Null);   
+//                Parameters.CreateParameter('@State',ftInteger,pdInput,4,0);
+//                Parameters.CreateParameter('@ApplyTime',ftDateTime,pdInput,8,0);
+//                Parameters.CreateParameter('@LogEventsID',ftLargeint,pdOutput,8,0);  
+//                Close;
+//                Parameters.ParamByName('@Name').Value := item.Name;
+//                Parameters.ParamByName('@OpenId').Value := IntToStr(item.Id);
+//                Parameters.ParamByName('@TelNO').Value := item.TelNo;
+//                Parameters.ParamByName('@CardNo').Value := StrToIntDef(item.Card,0);
+//                Parameters.ParamByName('@Photo').LoadFromStream(item.Image, ftVarBytes);  
+//                Parameters.ParamByName('@State').Value := 2;            
+//                Parameters.ParamByName('@ApplyTime').Value := Now;
+//                ExecProc ;
+//                res := StrToIntDef(VarToStr(Parameters.ParamByName('@RETURN_VALUE').Value),0);
+//                if(res >= 0) then result:=true
+//                else result:=false;
+                  ProcedureName:='us_AddPerson';
+                  Parameters.Clear;
+                  Parameters.CreateParameter('@RETURN_VALUE',ftInteger,pdReturnValue,4,-1);
+                  Parameters.CreateParameter('@LoginID',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@PCDvcID',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@PersonNO',ftString,pdInput,128,'');
+                  Parameters.CreateParameter('@UserName',ftString,pdInput,50,'');
+                  Parameters.CreateParameter('@PetName',ftString,pdInput,50,'');
+                  Parameters.CreateParameter('@Company',ftString,pdInput,255,'');
+                  Parameters.CreateParameter('@Comment',ftString,pdInput,255,'');
+                  Parameters.CreateParameter('@DepartmentCount',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@DepartmentIDList',ftString,pdInput,50,'');
+                  Parameters.CreateParameter('@Photo',ftBlob,pdInput,0,Null);
+                  Parameters.CreateParameter('@CardID',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@CreateTime',ftDateTime,pdInput,8,Null);
+                  Parameters.CreateParameter('@ExpirationTime',ftDateTime,pdInput,8,Null);
+                  Parameters.CreateParameter('@CardType',ftInteger,pdInput,4,5100);
+                  Parameters.CreateParameter('@PIN',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@CardStr',ftString,pdInput,50,'');
+                  Parameters.CreateParameter('@Role',ftInteger,pdInput,4,20);
+                  Parameters.CreateParameter('@ALCount',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@ALDvcIDList',ftString,pdInput,255,Null);
+                  Parameters.CreateParameter('@PercisionCount',ftInteger,pdInput,4,0);
+                  Parameters.CreateParameter('@PercisionRdrDvcIDList',ftString,pdInput,4000,Null);
+                  Parameters.CreateParameter('@PercisionTZELDvcIDList',ftString,pdInput,4000,Null);
+                  Parameters.CreateParameter('@LogEventsID',ftLargeint,pdOutput,8,0);
+                  Close;
+                  Parameters.ParamByName('@LoginID').Value := 11088;
+                  Parameters.ParamByName('@PCDvcID').Value := 11979;
+                  Parameters.ParamByName('@UserName').Value := item.Name;
+                  Parameters.ParamByName('@PetName').Value := item.Name;
+                  Parameters.ParamByName('@PersonNO').Value := item.TelNo;
+                  Parameters.ParamByName('@CardID').Value := StrToIntDef(item.Card,0);
+                  Parameters.ParamByName('@Photo').LoadFromStream(item.Image, ftVarBytes);
+                  Parameters.ParamByName('@ALCount').Value := StrToIntDef(Length(TRegEx.split(item.AccessPower,',')),0);
+                  Parameters.ParamByName('@ALDvcIDList').Value := item.AccessPower;
+                  ExecProc ;
+                  res := StrToIntDef(VarToStr(Parameters.ParamByName('@RETURN_VALUE').Value),0);
+                  if(res >= 0) then result:=true
+                  else result:=false;
+            end;
+        end;
+    except
+        on e:Exception do
+        begin
+            result := false;
+        end;
+    end;
+end;
+
+end.

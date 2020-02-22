@@ -1,0 +1,491 @@
+unit HCUsbSDK;
+
+interface
+
+Const
+  {$REGION '常量配置'}
+    MAX_MANUFACTURE_LEN           = 32;
+    MAX_DEVICE_NAME_LEN           = 32;
+    MAX_SERIAL_NUM_LEN            = 48;                         //序列号的最大长度
+    MAX_USERNAME_LEN              = 32;                         //用户名的最大长度
+    MAX_PASSWORD_LEN              = 16;                         //最大的密码长度
+    WORD_LEN                      = 256;
+    PIC_LEN                       = 1024;
+    FINGER_PRINT_LEN              = 1024;
+    ADDR_LEN                      = 128;
+    MAC_LEN                       = 16;
+    CARD_NO_LEN                   = 32;
+
+    INVALID_USER_ID               = -1;
+    USB_UPGRADE_FAILED            = 0;
+    USB_UPGRADE_SUCCESS           = 1;
+    USB_UPGRADE_TRANS             = 2;
+    USB_INVALID_UPGRADE_HANDLE    = -1;
+
+  {$REGION '错误码常量'}
+    USB_ERROR_BASE                = 0;
+    USB_SUCCESS                   = (USB_ERROR_BASE+0);         // Success (no error)
+
+    USB_ERROR_INIT_SDK            = (USB_ERROR_BASE+1);         //SDK Init Failed
+    USB_ERROR_SDK_NOT_INIT        = (USB_ERROR_BASE+2);         //SDK Not Initialization
+    USB_ERROR_NO_DEVICE           = (USB_ERROR_BASE+3);         // No such device (it may have been disconnected)
+    USB_ERROR_ACCESS              = (USB_ERROR_BASE+4);         // Access denied (insufficient permissions)
+
+    USB_ERROR_OPEN                = (USB_ERROR_BASE+5);         //Open Device failed
+    USB_ERROR_DEV_NOT_READY       = (USB_ERROR_BASE+6);         //Device is Not Ready
+
+    USB_ERROR_IO                  = (USB_ERROR_BASE+7);         // Input/output error
+    USB_ERROR_WRITE               = (USB_ERROR_BASE+8);         //Write Data to Device Failed
+    USB_ERROR_READ                = (USB_ERROR_BASE+9);         //Read Data from device Failed
+    USB_ERROR_TIMEOUT             = (USB_ERROR_BASE+10);        // Operation timed out
+    USB_ERROR_WRITE_TIMEOUT       = (USB_ERROR_BASE+11);        //Write Data Timeout
+    USB_ERROR_READ_TIMEOUT        = (USB_ERROR_BASE+12);        //Read Data Timeout
+
+    USB_ERROR_BUSY                = (USB_ERROR_BASE+13);        // Resource busy
+    USB_ERROR_WRITE_BUSY          = (USB_ERROR_BASE+14);        //Device is Busy for Write Data
+    USB_ERROR_READ_BUSY           = (USB_ERROR_BASE+15);        //Device is Busy for Read Data
+
+    USB_ERROR_CLOSE               = (USB_ERROR_BASE+16);        //Close Device Error
+
+    USB_ERROR_OVERFLOW            = (USB_ERROR_BASE+17);        // Overflow
+    USB_ERROR_NO_MEM              = (USB_ERROR_BASE+18);        // Insufficient memory
+    USB_ERROR_PIPE                = (USB_ERROR_BASE+19);        // Pipe error
+    USB_ERROR_INTERRUPTED         = (USB_ERROR_BASE+20);        // System call interrupted (perhaps due to signal)
+    USB_ERROR_NOT_SUPPORTED       = (USB_ERROR_BASE+21);        // Operation not supported or unimplemented on this platform
+    USB_ERROR_WAIT_OBJ            = (USB_ERROR_BASE+22);        //Wait obj Error
+    USB_ERROR_CREATE_OVERLAPPED   = (USB_ERROR_BASE+23);        //Create IO Overlapped failed
+    USB_ERROR_OVERLAPPED          = (USB_ERROR_BASE+24);        //IO Overlapped Event Invalid
+    USB_ERROR_RESET_EVENT         = (USB_ERROR_BASE+25);        //Reset Overlapped Event Failed
+
+    USB_ERROR_SET_OUT_REPORT      = (USB_ERROR_BASE+26);        //Set OutReport Error
+    USB_ERROR_RECV_PACK_TIMEOUT   = (USB_ERROR_BASE+27);        //Timeout when Receive Package from Device
+    USB_ERROR_RECV_DATA_LEN       = (USB_ERROR_BASE+28);        //The Length of the Data(form the Device) is Unexpect
+
+    USB_ERROR_PARAM_INVALID       = (USB_ERROR_BASE+29);        //Param Invalid
+    USB_ERROR_PARAM_1_INVALID     = (USB_ERROR_BASE+30);        //Param 1 Invalid
+    USB_ERROR_PARAM_2_INVALID     = (USB_ERROR_BASE+31);
+    USB_ERROR_PARAM_3_INVALID     = (USB_ERROR_BASE+32);
+    USB_ERROR_PARAM_4_INVALID     = (USB_ERROR_BASE+33);
+    USB_ERROR_PARAM_5_INVALID     = (USB_ERROR_BASE+34);
+    USB_ERROR_PARAM_6_INVALID     = (USB_ERROR_BASE+35);
+    USB_ERROR_PARAM_7_INVALID     = (USB_ERROR_BASE+36);
+    USB_ERROR_PARAM_8_INVALID     = (USB_ERROR_BASE+37);
+    USB_ERROR_INVALID_HANDLE      = (USB_ERROR_BASE+38);        //Handle Invalid
+
+    USB_ERROR_INVALID_USER_ID     = (USB_ERROR_BASE+39);        //Invalid User ID
+    USB_ERROR_INVALID_DEVICE_ID   = (USB_ERROR_BASE+40);        //Device ID is Invalid
+    USB_ERROR_INVALID_SEESSION_ID = (USB_ERROR_BASE+41);        //Session ID is Invalid
+    USB_ERROR_CHECKSUM_FAILED     = (USB_ERROR_BASE+42);        //Checksum Failed
+
+    USB_ERROR_INTER_STRUCT_SIZE   = (USB_ERROR_BASE+43);        //Size of Inter Struct Error
+    USB_ERROR_EXTER_STRUCT_SIZE   = (USB_ERROR_BASE+44);        //Size of Exter Struct Error
+    USB_ERROR_STRUCT_HEAD_VER     = (USB_ERROR_BASE+45);        //Version of Struct Head is not Define
+
+    USB_ERROR_REG_SEESION         = (USB_ERROR_BASE+46);        //Register Session Error
+    USB_ERROR_CONVERT_PARAM       = (USB_ERROR_BASE+47);        //Convert Param Error
+
+    USB_ERROR_INTER_CMD_NOT_DEF   = (USB_ERROR_BASE+48);        //Inter Command Not Define
+    USB_ERROR_EXTERNAL_CMD_NOT_DEF= (USB_ERROR_BASE+49);        //External Command Not Define
+
+    USB_ERROR_GET_DEV_ENCRY       = (USB_ERROR_BASE+50);        //Get Device Encrypt Error
+    USB_ERROR_GET_DEV_AES         = (USB_ERROR_BASE+51);        //Get AES from Device Error
+    USB_ERROR_DEV_NOT_SUPPOTR_AES = (USB_ERROR_BASE+52);        //Device do not support AES
+    USB_ERROR_DEV_NOT_SUPPOTR_CRC = (USB_ERROR_BASE+53);        //Device do not support CRC
+    USB_ERROR_SDK_AES_MOD         = (USB_ERROR_BASE+54);        //SDK Set AES Mod Error
+    USB_ERROR_SDK_AES_KEY         = (USB_ERROR_BASE+55);        //SDK Set AES Key Error
+    USB_ERROR_SDK_AES_KEY_LEN     = (USB_ERROR_BASE+56);        //The Length of AES Key is Not Math with the Type
+    USB_ERROR_SDK_AES_KEY_TYPE    = (USB_ERROR_BASE+57);        //Wrong AES Type
+    USB_ERROR_SDK_AES_PROCESS     = (USB_ERROR_BASE+58);        //SDK AES Process Error
+    USB_ERROR_AES_INPUT_DATA_LEN  = (USB_ERROR_BASE+59);        //AES Input Data Length Error
+
+    USB_ERROR_GET_DEV_AES_KEY     = (USB_ERROR_BASE+60);        //Get Device AES Key Error
+    USB_ERROR_DEV_REG             = (USB_ERROR_BASE+61);        //Register Device Error
+    USB_ERROR_LOGIN               = (USB_ERROR_BASE+62);        //Login Error
+    USB_ERROR_RELOGIN             = (USB_ERROR_BASE+63);        //ReLogin Error
+    USB_ERROR_LOGOUT              = (USB_ERROR_BASE+64);        //Logout Error
+
+    USB_ERROR_RET_HEAD_LENGTH     = (USB_ERROR_BASE+65);        //The Length of Ret Head is Error
+    USB_ERROR_RET_HEAD_VERSION    = (USB_ERROR_BASE+66);        //The Version of Ret Head is not Support
+    USB_ERROR_RET_HEAD            = (USB_ERROR_BASE+67);        //Ret Head Error
+    USB_ERROR_RET_DATA_LEN        = (USB_ERROR_BASE+68);        //The Data Length in RetHead is Error
+
+  {$REGION '设备相关错误码常量'}
+    USB_ERROR_DEV_OPER_FAILED     = (USB_ERROR_BASE+257);       // 操作失败
+    USB_ERROR_DEV_OPER_NOT_SUPPORT= (USB_ERROR_BASE+258);       // 设备不支持该操作
+    USB_ERROR_DEV_CHECK_SUM       = (USB_ERROR_BASE+259);       // 校验和错误
+    USB_ERROR_DEV_USER_ID         = (USB_ERROR_BASE+260);       // 非法的UserID
+    USB_ERROR_DEV_SESSION_ID      = (USB_ERROR_BASE+261);       // 非法的SessionID
+    USB_ERROR_DEV_OPER_TIMEOUT    = (USB_ERROR_BASE+262);       // 设备操作超时
+
+    USB_ERROR_DEV_UNKNOW_OPER_RES = (USB_ERROR_BASE+512);       // 未知的设备操作返回码
+
+    USB_ERROR_NOT_DEFINED         = (USB_ERROR_BASE+$02FE);     //Error code is not defined
+    USB_ERROR_OTHER               = (USB_ERROR_BASE+$02FF);     // Other error
+  {$ENDREGION}
+  {$ENDREGION}
+
+  {$REGION '操作提示码常量'}
+    USB_RET_SUCCESS               =  $00;                       //操作成功
+    USB_RET_FAILED                =  $01;                       //操作失败
+    USB_RET_OPER_NOT_SUPPORT      =  $02;                       //设备不支持该操作
+    USB_RET_CHECK_SUM_ERROR       =  $03;                       //校验和错误
+    USB_RET_INVALID_USER_ID       =  $04;                       //非法的UserID
+    USB_RET_INVALID_SESSION_ID    =  $05;                       //非法的SessionID
+    USB_RET_OPER_TIMEOUT          =  $06;                       //设备操作超时
+
+    USB_SDK_OPERATION_CMD_START   = $0100;
+
+    USB_SDK_SET_BEEP_AND_FLICKER  = $0100;                     //控制蜂鸣器及显示灯
+    USB_SDK_GET_HAIRPIN_VERSION   = $0101;
+    USB_SDK_CTRL_RESET_RFC        = $0102;
+    USB_SDK_SET_CARD_PROTO        = $0103;                     //设置操作卡协议类型
+    USB_SDK_GET_ACTIVATE_CARD     = $0104;
+    USB_SDK_CTRL_STOP_CARD_OPER   = $0105;
+    USB_SDK_SET_M1_PWD_VERIFY     = $0106;                     //(M1卡) 验证扇区密码
+    USB_SDK_GET_M1_READ_BLOCK     = $0107;
+    USB_SDK_SET_M1_WRITE_BLOCK    = $0108;                     //(M1卡) 写卡指定块数据
+    USB_SDK_SET_M1_MODIFY_SCB     = $0109;                     //(M1卡) 修改指定扇区控制块
+    USB_SDK_SET_M1_BLOCK_ADD_VALUE= $010A;                     //(M1卡) 块加值
+    USB_SDK_SET_M1_BLOCK_MINUS_VALUE=$010B;                    //(M1卡) 块减值
+    USB_SDK_CTRL_M1_BLOCK_TO_REG  = $010C;
+    USB_SDK_CTRL_M1_REG_TO_BLOCK  = $010D;
+    USB_SDK_SET_M1_MIFARE_PACK    = $010E;                     //(M1卡) Mifare数据包透传
+
+    USB_SDK_SET_PSAM_SEAT         = $0110;
+    USB_SDK_SET_CARD_PARAM        = $0111;                     //设置卡参数
+    USB_SDK_GET_CPU_CARD_RESET    = $0112;
+    USB_SDK_SET_CPU_CARD_PACK     = $0113;                     //CPU卡数据包透传
+
+    USB_SDK_OPERATION_CMD_END     = $0114;
+
+    USB_SDK_GET_CERTIFICATE_INFO  = 1000;
+    USB_SDK_GET_CERTIFICATE_ADD_ADDR_INFO=1001;
+    USB_SDK_GET_CERTIFICATE_MAC   = 1002;
+    USB_SDK_GET_IC_CARD_NO        = 1003;
+    USB_SDK_DETECT_CARD           = 1021;                       //检测卡片
+    USB_SDK_SET_IDENTITY_INFO     = 1023;                       //身份信息下发
+  {$ENDREGION}
+  {$ENDREGION}
+
+  LOG_PATH = 'HCUsbLogs';
+Type
+  {$REGION 'Enum'}
+    LOG_LEVEL_ENUM=(ENUM_LOG_CLOSE = 0,
+                        ENUM_ERROR_LEVEL = 1,
+                        ENUM_DEBUG_LEVEL = 2,
+                        ENUM_INFO_LEVEL = 3);
+  {$ENDREGION}
+  {$REGION '结构体'}
+    LPUSB_SDK_USER_LOGIN_INFO = ^USB_SDK_USER_LOGIN_INFO;
+    USB_SDK_USER_LOGIN_INFO = RECORD                                        //192字节
+        dwSize        :   LongWord;                                         //结构体大小
+        dwTimeout     :   LongWord;                                         //登录超时时间（单位：毫秒）
+        dwVID         :   LongWord;                                         //设备VID，枚举设备时得到
+        dwPID         :   LongWord;                                         //设备PID，枚举设备时得到
+        szUserName    :   ARRAY[0..MAX_USERNAME_LEN-1] of AnsiChar;         //用户名
+        szPassword    :   ARRAY[0..MAX_PASSWORD_LEN-1] of AnsiChar;         //密码
+        szSerialNumber:   ARRAY[0..MAX_SERIAL_NUM_LEN-1] of AnsiChar;       //设备序列号，枚举设备时得到
+        byRes         :   ARRAY[0..79] of BYTE;
+    end;
+    LPUSB_SDK_DEVICE_INFO = ^USB_SDK_DEVICE_INFO;
+    USB_SDK_DEVICE_INFO = RECORD                                            //192字节
+        dwSize        :   LongWord;                                         //结构体大小
+        dwVID         :   LongWord;                                         //设备VID
+        dwPID         :   LongWord;                                         //设备PID
+        szManufacturer:   ARRAY[0..MAX_MANUFACTURE_LEN-1] of AnsiChar;      //制造商（来自描述符）
+        szDeviceName  :   ARRAY[0..MAX_DEVICE_NAME_LEN-1] of AnsiChar;      //设备名称（来自描述符）
+        szSerialNumber:   ARRAY[0..MAX_SERIAL_NUM_LEN-1] of AnsiChar;       //设备序列号（来自描述符）
+        byRes         :   ARRAY[0..67] of BYTE;
+    END;
+    LPUSB_SDK_DEVICE_REG_RES = ^USB_SDK_DEVICE_REG_RES;
+    USB_SDK_DEVICE_REG_RES = RECORD                                         //128字节
+        dwSize        :   LongWord;                                         //结构体大小
+        szDeviceName  :   ARRAY[0..MAX_DEVICE_NAME_LEN-1] of AnsiChar;      //设备名称
+        szSerialNumber:   ARRAY[0..MAX_SERIAL_NUM_LEN-1] of AnsiChar;       //设备序列号
+        dwSoftwareVersion:LongWord;                                         //软件版本号,高16位是主版本,低16位是次版本
+        byRes         :   ARRAY[0..39] of BYTE;
+    END;
+    LPUSB_CONFIG_INPUT_INFO = ^USB_CONFIG_INPUT_INFO;
+    USB_CONFIG_INPUT_INFO = RECORD                                          //64字节
+        lpCondBuffer  :   Pointer;                                          //指向条件缓冲区
+        dwCondBufferSize: LongWord;                                         //条件缓冲区大小
+        lpInBuffer    :   Pointer;                                          //指向输出缓冲区
+        dwInBufferSize:   LongWord;                                         //输入缓冲区大小
+        byRes         :   ARRAY[0..47] of BYTE;
+    END;
+    LPUSB_CONFIG_OUTPUT_INFO = ^USB_CONFIG_OUTPUT_INFO;
+    USB_CONFIG_OUTPUT_INFO =  RECORD                                        //64字节
+        lpOutBuffer   :   Pointer;                                          //指向输出缓冲区
+        dwOutBufferSize:  LongWord;                                         //输出缓冲区大小
+        byRes         :   ARRAY[0..55] of BYTE;
+    END;
+    LPUSB_CONTROL_INPUT_INFO = ^USB_CONTROL_INPUT_INFO;
+    USB_CONTROL_INPUT_INFO = RECORD                                         //64字节
+        lpParamBuffer :   Pointer;                                          //输入参数缓冲区
+        dwParamBufferSize:LongWord;                                        //输入参数缓冲区大小
+        lpInBuffer    :   Pointer;                                          //输入缓冲区
+        dwInBufferSize:   LongWord;                                         //输入缓冲区大小
+        byRes         :   ARRAY[0..47] of BYTE;
+    END;
+    LPUSB_UPGRADE_STATE_INFO = ^USB_UPGRADE_STATE_INFO;
+    USB_UPGRADE_STATE_INFO =  RECORD                                        //12字节
+        dwSize        :   LongWord;
+        byState       :   BYTE;
+        byProgress    :   BYTE;
+        byRes         :   ARRAY[0..6] of BYTE;
+    END;
+    LPUSB_UPGRADE_COND  = ^USB_UPGRADE_COND;
+    USB_UPGRADE_COND =  RECORD                                              //16字节
+        dwSize        :   LongWord;
+        byTimeout     :   BYTE;
+        byRes1        :   ARRAY[0..10] of BYTE;
+    END;
+    LPUSB_SDK_BEEP_AND_FLICKER = ^USB_SDK_BEEP_AND_FLICKER;
+    USB_SDK_BEEP_AND_FLICKER = RECORD                                       //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        byBeepType    :   BYTE;                                             //蜂鸣类型 0无效，1连续，2慢鸣，3快鸣，4停止
+        byBeepCount   :   BYTE;                                             //鸣叫次数, （只对慢鸣、快鸣有效，且不能为0）
+        byFlickerType :   BYTE;                                             //闪烁类型 0无效，1连续，2错误，3正确，4停止
+        byFlickerCount:   BYTE;                                             //闪烁次数（只对错误、正确有效，且不能为0）
+        byRes         :   ARRAY[0..23] of BYTE;
+    END;
+    LPUSB_SDK_HAIRPIN_VERSION = ^USB_SDK_HAIRPIN_VERSION;
+    USB_SDK_HAIRPIN_VERSION =  RECORD                                       //128字节
+        dwSize        :   LongWord;                                         //结构体大小
+        szDeviceName  :   ARRAY[0..MAX_DEVICE_NAME_LEN-1] of AnsiChar;      //设备名称
+        szSerialNumber:   ARRAY[0..MAX_SERIAL_NUM_LEN-1] of AnsiChar;       //设备序列号
+        dwSoftwareVersion:LongWord;                                        //软件版本号,//软件版本号，格式为：24-32位为主版本号，16-24位为次版本号；0-16位为最小版本号；
+        byRes         :   ARRAY[0..39] of BYTE;
+    END;
+    LPUSB_SDK_CARD_PROTO = ^USB_SDK_CARD_PROTO;
+    USB_SDK_CARD_PROTO =  RECORD                                            //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        byProto       :   BYTE;                                             //卡协议类型（0-TypeA,1-TypeB,2-typeAB,3-125Khz,255所有）
+        byRes         :   ARRAY[0..26] of BYTE;
+    END;
+    LPUSB_SDK_WAIT_SECOND = ^USB_SDK_WAIT_SECOND;
+    USB_SDK_WAIT_SECOND =  RECORD                                           //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        byWait        :   BYTE;                                             // 1Byte操作等待时间（0-一直执行直到有卡响应，其他对应1S单位）
+        byRes         :   ARRAY[0..26] of BYTE;
+    END;
+    LPUSB_SDK_ACTIVATE_CARD_RES = ^USB_SDK_ACTIVATE_CARD_RES;
+    USB_SDK_ACTIVATE_CARD_RES = RECORD                                      //32字节
+        dwSize        :   LongWord;
+        byCardType    :   BYTE;                                             // 卡类型（0-TypeA m1卡，1-TypeA cpu卡,2-TypeB,3-125kHz Id卡）
+        bySerialLen   :   BYTE;                                             //卡物理序列号字节长度
+        bySerial      :   ARRAY[0..9] of BYTE;                              //卡物理序列号
+        bySelectVerifyLen:BYTE;                                            //选择确认长度
+        bySelectVerify:  ARRAY[0..2] of BYTE;                              //选择确认(3字节)
+        byRes         :   ARRAY[0..11] of BYTE;
+    END;
+    LPUSB_SDK_M1_PWD_VERIFY_INFO = ^USB_SDK_M1_PWD_VERIFY_INFO;             //卡扇区带密码验证结构体
+    USB_SDK_M1_PWD_VERIFY_INFO =  RECORD                                    //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        byPasswordType:   BYTE;                                             //密码类别（0-KeyA, 1-KeyB）
+        bySectionNum  :   BYTE;                                             //要验证密码的扇区号
+        byRes1        :   ARRAY[0..1] of BYTE;                              //保留字节
+        byPassword    :   ARRAY[0..5] of BYTE;                              //6Byte密码
+        byRes         :   ARRAY[0..17] of BYTE;                             //保留字节
+    END;
+    LPUSB_SDK_USB_M1_BLOCK_ADDR = ^USB_SDK_M1_BLOCK_ADDR;
+    USB_SDK_M1_BLOCK_ADDR =  RECORD                                         //32字节
+        dwSize        :   LongWord;
+        wAddr         :   Word;                                             // 2Byte块地址
+        byRes         :   ARRAY[0..25] of BYTE;
+    END;
+    LPUSB_SDK_M1_BLOCK_DATA = ^USB_SDK_M1_BLOCK_DATA;
+    USB_SDK_M1_BLOCK_DATA = RECORD                                          //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        byData        :   ARRAY[0..15] of BYTE;                             //16Byte块数据
+        byRes         :   ARRAY[0..11] of BYTE;
+    END;
+    LPUSB_SDK_M1_BLOCK_WRITE_DATA = ^USB_SDK_M1_BLOCK_WRITE_DATA;           //写卡指定块数据
+    USB_SDK_M1_BLOCK_WRITE_DATA = RECORD                                    //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        wAddr         :   Word;                                             //2Byte块地址
+        byDataLen     :   BYTE;                                             //数据长度(0-16)
+        byRes1        :   BYTE;                                             //保留字节
+        byData        :   ARRAY[0..15] of BYTE;                             //16Byte BUFF(要写的块数据)
+        byRes         :   ARRAY[0..7] of BYTE;                              //保留字节
+    END;
+    LPUSB_SDK_M1_MODIFY_SCB = ^USB_SDK_M1_MODIFY_SCB;                       //(M1卡) 修改指定扇区控制块
+    USB_SDK_M1_MODIFY_SCB =  RECORD                                         //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        bySectionNum  :   BYTE;                                             //1Byte扇区号
+        byPasswordA   :   ARRAY[0..5] of BYTE;                              //6Byte 密码A
+        byRes1        :   BYTE;                                             //保留字节
+        byCtrlBits    :   ARRAY[0..3] of BYTE;                              //4Byte控制位
+        byPasswordB   :   ARRAY[0..5] of BYTE;                              //6Byte 密码B
+        byRes         :   ARRAY[0..9] of BYTE;                              //保留字节
+    END;
+    LPUSB_SDK_M1_BLOCK_OPER = ^USB_SDK_M1_BLOCK_OPER;
+    USB_SDK_M1_BLOCK_OPER =  RECORD                                         //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        wAddr         :   Word;                                             //2Byte块地址
+        wValue        :   Word;                                             //2Byte要增加的值
+        byRes         :   ARRAY[0..23] of BYTE;
+    END;
+    LPUSB_SDK_M1_BLOCK_OPER_RES = ^USB_SDK_M1_BLOCK_OPER_RES;
+    USB_SDK_M1_BLOCK_OPER_RES =  RECORD                                     //32字节
+        dwSize        :   LongWord;
+        wSuccessNum   :   Word;                                             //2Byte 实际成功次数
+        byRes         :   ARRAY[0..25] of BYTE;
+    END;
+    LPUSB_SDK_M1_MIFARE_PACK = ^USB_SDK_M1_MIFARE_PACK;
+    USB_SDK_M1_MIFARE_PACK = RECORD                                         //320字节
+        dwSize        :   LongWord;
+        byBufLen      :   BYTE;                                             //数据长度（0-255）
+        byRes1        :   ARRAY[0..2] of BYTE;                              //保留字节
+        byBuf         :   ARRAY[0..254] of BYTE;                            //数据
+        byRes2        :   BYTE;                                             //保留字节
+        byDelay       :   BYTE;                                             //延迟时间（单位10ms）,0为默认值（2000ms）(由于SDK默认超时时间5秒，这个时间应不超过5秒)
+        byRes         :   ARRAY[0..54] of BYTE;
+    END;
+    LPUSB_SDK_PSAM_SEAT_INFO = ^USB_SDK_PSAM_SEAT_INFO;
+    USB_SDK_PSAM_SEAT_INFO = RECORD                                         //32字节
+        dwSize        :   LongWord;
+        bySeat        :   BYTE;                                              //1Byte PSAM卡座序号（0- 卡座1，1-卡座2）
+        byRes         :   ARRAY[0..26] of BYTE;
+    END;
+    LPUSB_SDK_CARD_PARAM = ^USB_SDK_CARD_PARAM;
+    USB_SDK_CARD_PARAM =  RECORD                                            //32字节
+        dwSize        :   LongWord;
+        byCardType    :   BYTE;                                             //1Byte卡类型(0-13.56射频CPU卡，1-PSAM卡座1,2-PSAM卡座2)
+        byCardProto   :   BYTE;                                             //1Byte卡协议类型（0为T=0，1为T=1）
+        byRes         :   ARRAY[0..25] of BYTE;
+    END;
+    LPUSB_SDK_CPU_CARD_RESET_RES = ^USB_SDK_CPU_CARD_RESET_RES;
+    USB_SDK_CPU_CARD_RESET_RES = RECORD                                     //96字节
+        dwSize        :   LongWord;
+        byBufLen      :   BYTE;                                             //byBuf中有效数据长度（0-60）
+        byRes1        :   ARRAY[0..2] of BYTE;                              //保留字节
+        byBuf         :   ARRAY[0..59] of BYTE;                             //（一般是厂商信息）
+        byRes         :   ARRAY[0..27] of BYTE;                             //保留字节
+    END;
+    LPUSB_SDK_CPU_CARD_PACK = ^USB_SDK_CPU_CARD_PACK;
+    USB_SDK_CPU_CARD_PACK =  RECORD                                         //320字节
+        dwSize        :   LongWord;
+        byBufLen      :   BYTE;                                             //0-255
+        byRes1        :   ARRAY[0..2] of BYTE;                              //保留字节
+        byBuf         :   ARRAY[0..254] of BYTE;
+        byDelay       :   BYTE;                                             //延迟时间（单位10ms），0为默认（200ms）
+        byRes         :   ARRAY[0..55] of BYTE;                             //保留字节
+    END;
+    LPUSB_SDK_CERTIFICATE_INFO = ^USB_SDK_CERTIFICATE_INFO;
+    USB_SDK_CERTIFICATE_INFO = RECORD
+        dwSize        :   LongWord;                                         //结构体大小
+        wWordInfoSize :   Word;                                             //文字信息长度
+        wPicInfoSize  :   Word;                                             //相片信息长度
+        wFingerPrintInfoSize:Word;                                          //指纹信息长度
+        byCertificateType: BYTE;                                            //证件类型：0-身份证，1-中国绿卡
+        byRes2        :   BYTE;
+        byWordInfo    :   ARRAY[0..WORD_LEN-1] of BYTE;                     //文字信息
+        byPicInfo     :   ARRAY[0..PIC_LEN-1] of BYTE;                      //相片信息
+        byFingerPrintInfo:ARRAY[0..FINGER_PRINT_LEN-1] of BYTE;             //指纹信息
+        byRes         :   ARRAY[0..39] of BYTE;
+    END;
+    LPUSB_SDK_IDENTITY_INFO_CFG = ^USB_SDK_IDENTITY_INFO_CFG;
+    USB_SDK_IDENTITY_INFO_CFG =  RECORD
+        dwSize        :   LongWord;                                         //结构体大小
+        wPicInfoSize  :   Word;                                             //相片信息长度
+        wFingerPrintInfoSize:Word;                                          //指纹信息长度
+        byPicInfo     :   ARRAY[0..PIC_LEN-1] of BYTE;                      //身份证图片信息
+        byFingerPrintInfo:ARRAY[0..FINGER_PRINT_LEN-1] of BYTE;             //指纹信息
+        byRes         :   ARRAY[0..255] of BYTE;
+    END;
+    LPUSB_SDK_CERTIFICATE_ADD_ADDR_INFO = ^USB_SDK_CERTIFICATE_ADD_ADDR_INFO;
+    USB_SDK_CERTIFICATE_ADD_ADDR_INFO = RECORD
+        dwSize        :   LongWord;                                         //结构体大小
+        wAddrInfoSize :   Word;                                             //追加住址信息长度
+        byAddAddrInfo :   ARRAY[0..ADDR_LEN-1] of BYTE;                     //追加住址信息
+        byRes         :   ARRAY[0..39] of BYTE;
+    END;
+    LPUSB_SDK_CERTIFICATE_MAC = ^USB_SDK_CERTIFICATE_MAC;
+    USB_SDK_CERTIFICATE_MAC = RECORD
+        dwSize        :   LongWord;                                         //结构体大小
+        byMac         :   ARRAY[0..MAC_LEN-1] of BYTE;                      //物理序列号
+        byRes         :   ARRAY[0..39] of BYTE;
+    END;
+    LPUSB_SDK_IC_CARD_NO = ^USB_SDK_IC_CARD_NO;
+    USB_SDK_IC_CARD_NO =  RECORD
+        dwSize        :   LongWord;                                         //结构体大小
+        byCardNo      :   ARRAY[0..CARD_NO_LEN-1] of BYTE;                  //IC卡卡号
+        byRes         :   ARRAY[0..39] of BYTE;
+    END;
+    LPUSB_SDK_DETECT_CARD_COND = ^USB_SDK_DETECT_CARD_COND;
+    USB_SDK_DETECT_CARD_COND = RECORD                                       //32字节
+        dwSize        :   LongWord;                                         //结构体大小
+        byWait        :   BYTE;                                             // 1Byte操作等待时间（0-一直执行直到有卡响应，其他对应1S单位）
+        byRes         :   ARRAY[0..26] of BYTE;
+    END;
+    LPUSB_SDK_DETECT_CARD_CFG = ^USB_SDK_DETECT_CARD_CFG;                   //32字节
+    USB_SDK_DETECT_CARD_CFG = RECORD
+        dwSize        :   LongWord;                                         //结构体大小
+        byCardStatus  :   BYTE;                                             //卡片状态：0-未检测到，1-检测到
+        byRes         :   ARRAY[0..26] of BYTE;
+    END;
+  {$ENDREGION}
+
+  {$REGION 'CallBack'}
+    //??typedef void(CALLBACK *fEnumDeviceCallBack)(USB_SDK_DEVICE_INFO *pDevceInfo, void *pUser);
+    fEnumDeviceCallBack = Procedure(Var pDevceInfo:USB_SDK_DEVICE_INFO;pUser:Pointer);stdcall;
+  {$ENDREGION}
+
+  {$REGION 'dllimport'}
+    //USB_SDK的初始化
+    FUNCTION USB_SDK_Init():BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+    //USB_SDK的反初始化
+    FUNCTION USB_SDK_Cleanup():BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_SetLogToFile(dwLogLevel:LongWord;
+                                    Const strLogDir:PAnsiChar;
+                                    bAutoDel:Boolean):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+    //获取错误码
+    FUNCTION USB_SDK_GetLastError():LongWord;stdcall;external 'HCUsbSDK.dll';
+    //获取错误码对应的信息
+    FUNCTION USB_SDK_GetErrorMsg(dwErrorCode:LongWord):PAnsiChar;stdcall;external 'HCUsbSDK.dll';
+    //枚举USB设备:()
+    FUNCTION USB_SDK_EnumDevice(cbEnumDeviceCallBack:fEnumDeviceCallBack;
+                                  pUser:Pointer):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+    //登录设备
+    FUNCTION USB_SDK_Login(Var pUsbLoginInfo:USB_SDK_USER_LOGIN_INFO;
+                            Var pDevRegRes:USB_SDK_DEVICE_REG_RES):Int64;stdcall;external 'HCUsbSDK.dll';
+    //关闭USB设备
+    FUNCTION USB_SDK_Logout(lUserID:Int64):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_SetDeviceConfig(lUserID:Int64;
+                                      dwCommand:LongWord;
+                                      Var pConfigInputInfo:USB_CONFIG_INPUT_INFO;
+                                      Var pConfigOutputInfo:USB_CONFIG_OUTPUT_INFO):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_GetDeviceConfig(lUserID:Int64;
+                                      dwCommand:LongWord;
+                                      Var pConfigInputInfo:USB_CONFIG_INPUT_INFO;
+                                      Var pConfigOutputInfo:USB_CONFIG_OUTPUT_INFO):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_ControlDevice(lUserID:Int64;
+                                      dwCommand:LongWord;
+                                      pInputInfo:LPUSB_CONTROL_INPUT_INFO):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_GetSDKVersion():LongWord;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_Upgrade(lUserID:Int64;
+                              dwUpgradeType:LongWord;
+                              sFileName:PAnsiChar;
+                              pInbuffer:Pointer;
+                              dwBufferLen:LongWord):Int64;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_GetUpgradeState(lUpgradeHandle:Int64;
+                                      pUpgradeState:LPUSB_UPGRADE_STATE_INFO):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION USB_SDK_CloseUpgradeHandle(lUpgradeHandle:Int64):BOOLEAN;stdcall;external 'HCUsbSDK.dll';
+
+    FUNCTION dewlt(strPictureBin:Pointer):Integer;stdcall;external 'Dewlt.dll';
+  {$ENDREGION}
+implementation
+
+end.
+
+
+

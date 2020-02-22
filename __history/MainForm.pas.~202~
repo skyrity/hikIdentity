@@ -1,0 +1,924 @@
+unit MainForm;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,Common,DataHelper,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ComCtrls, Vcl.ExtCtrls,FaceRegister,Generics.Collections,
+  Vcl.Imaging.jpeg, IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdSSLOpenSSL,
+  IdHTTP, Vcl.CheckLst;
+
+type
+  TfrmMain = class(TForm)
+    Panel1: TPanel;
+    Panel2: TPanel;
+    Panel3: TPanel;
+    imgPhoto: TImage;
+    btn_Clear: TButton;
+    REditDebug: TRichEdit;
+    Panel4: TPanel;
+    Panel5: TPanel;
+    Label2: TLabel;
+    txt_UserName: TEdit;
+    Label24: TLabel;
+    txt_Password: TEdit;
+    btn_Login: TButton;
+    btn_GetData: TButton;
+    Label1: TLabel;
+    cb_CheckState: TComboBox;
+    Label3: TLabel;
+    txt_KeyWord: TEdit;
+    lv_FaceList: TListView;
+    btn_DownLoad: TButton;
+    btn_SearchFaceInfo: TButton;
+    IdHTTP1: TIdHTTP;
+    btn_GetNextData: TButton;
+    btn_DownLoadALL: TButton;
+    btn_ShowImg: TButton;
+    ck_AutoDeal: TCheckBox;
+    ti_AutoDownLoad: TTimer;
+    btn_DBConfig: TButton;
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    lv_AccessList: TListView;
+    btn_AccessLock: TButton;
+    procedure btn_ClearClick(Sender: TObject);
+    procedure btn_LoginClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure btn_GetDataClick(Sender: TObject);
+    procedure btn_DownLoadClick(Sender: TObject);
+    procedure btn_SearchFaceInfoClick(Sender: TObject);
+    procedure btn_GetNextDataClick(Sender: TObject);
+    procedure btn_DownLoadALLClick(Sender: TObject);
+    procedure btn_ShowImgClick(Sender: TObject);
+    procedure lv_FaceListDblClick(Sender: TObject);
+    procedure lv_FaceListClick(Sender: TObject);
+    procedure ti_AutoDownLoadTimer(Sender: TObject);
+    procedure ck_AutoDealClick(Sender: TObject);
+    procedure btn_DBConfigClick(Sender: TObject);
+    procedure btn_AccessLockClick(Sender: TObject);
+    procedure lv_AccessListItemChecked(Sender: TObject; Item: TListItem);
+  private
+    FFaceRegister : TServiceBase;
+    FDB_Controller:TDBBaseInfo;
+    { Private declarations }
+    procedure DebugPrint(StrText: String; Color: TColor);
+    //获取数据库已有人员信息
+    procedure GetFaceList;
+//    procedure GetFaceImg(pNo:String);
+    //注册信息录入数据库
+    function SaveToDB(item: TFaceInfo):Boolean;
+    //已登录服务器检查
+    function IsLoginSystem:Boolean;
+    //检查服务器链接是否异常
+//    function CheckServiceLink():Boolean;
+    //自动下载中间服务器人脸注册信息
+    procedure GetAutoDealData();
+    procedure AllButtonState(flag:Boolean = true);
+    function GetAccessStr(var count:Integer):String;
+
+  public
+    { Public declarations }
+  end;
+
+var
+  frmMain: TfrmMain;
+
+implementation
+
+{$R *.dfm}
+Uses ConfigurateForm,idURI,IniFiles,RegularExpressions;
+
+procedure TfrmMain.btn_AccessLockClick(Sender: TObject);
+Var
+    Count:Integer;
+    str:String;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    AllButtonState(false);
+    Count := 0;
+    str:=self.GetAccessStr(Count);
+    if(Count > 6) and (Count = 0) then
+    begin
+        DebugPrint('默认权限配置保存失败，请确认权限配置正确！', clRed);
+        Exit;
+    end;
+    str:= copy(str, 1, Length(str)-1);
+    Common.WriteAccess(str);
+    DebugPrint('权限配置已保存：' + str, clGreen);
+    AllButtonState(true);
+end;
+
+procedure TfrmMain.btn_ClearClick(Sender: TObject);
+begin
+  REditDebug.Clear;
+end;
+
+function  TfrmMain.SaveToDB(item: TFaceInfo):Boolean;
+Var
+  imgStream: TMemoryStream;
+  LHandler: TIdSSLIOHandlerSocketOpenSSL;
+  strContent:String;
+begin
+    try
+        imgStream:= TMemoryStream.Create;
+        LHandler:=  TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+        self.IdHTTP1.HTTPOptions:=IdHTTP1.HTTPOptions+[hoKeepOrigProtocol];//关键这行
+        self.IdHTTP1.ProtocolVersion:=pv1_1;
+        self.IdHTTP1.IOHandler := LHandler;
+        self.IdHTTP1.Get(TIdURI.URLEncode(item.ImgUrl),imgStream);
+//        self.IdHTTP1.Get('https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1578659174649&di=fb729300ba07ab160273024e863bef7d&imgtype=0&src=http%3A%2F%2Fpic8.nipic.com%2F20100621%2F408848_221521589321_2.jpg',imgStream);
+        if(imgStream.Size > 0) then
+        begin
+          item.Image:= imgStream;
+          result:= FDB_Controller.SaveFaceInfo(item);
+        end
+        else  result := false;
+
+    except
+        on e:Exception do
+        begin
+            DebugPrint('异常说明：'+ e.Message, clRed);
+            DebugPrint('异常数据：人员ID=' + item.TelNo + ';服务器数据ID=' + IntToStr(item.Id) + ';', clRed);
+//            DebugPrint('异常数据：'+ item.ToString, clRed);
+            strContent:= '数据库保存异常数据：人员ID=' + item.TelNo + ';服务器数据ID=' + IntToStr(item.Id) + ';';
+            Common.WorkLogRecord(strContent);
+            result := false;
+        end;
+    end;
+end;
+
+procedure TfrmMain.ti_AutoDownLoadTimer(Sender: TObject);
+Var
+    strTime:String;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    ti_AutoDownLoad.Enabled := false;
+    try
+        try
+            strTime := FormatDateTime('yyyy-MM-dd hh:nn:ss', Now);
+            DebugPrint(strTime + ':本次任务执行开始！', clBlue);
+            GetAutoDealData();
+            DebugPrint(strTime + ':本次任务执行完成！', clGreen);
+        finally
+            ti_AutoDownLoad.Enabled := true;
+        end;
+    except
+
+
+    end;
+end;
+
+function TfrmMain.IsLoginSystem:Boolean;
+begin
+    result := true;
+    if (FFaceRegister = nil) OR (not(FFaceRegister.IsLogin)) then
+    begin
+      DebugPrint('请登陆服务器！', clGreen);
+      result := false;
+    end;
+end;
+
+procedure TfrmMain.lv_AccessListItemChecked(Sender: TObject; Item: TListItem);
+Var
+    Count :Integer;
+    strAccess:String;
+begin
+     strAccess:= GetAccessStr(Count);
+     if(Count > 6) then
+     begin
+        Item.Checked := false;
+        DebugPrint('默认权限分配不能超过限定（最多6个）！', clRed);
+     end;
+end;
+
+procedure TfrmMain.lv_FaceListClick(Sender: TObject);
+Var
+  state :Integer;
+  strUrl:String;
+  imgStream: TMemoryStream;
+  jpg:TJpegImage;
+  LHandler: TIdSSLIOHandlerSocketOpenSSL;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+     if Assigned(lv_FaceList.Selected) then
+    begin
+        DebugPrint(lv_FaceList.Selected.SubItems.Strings[2], clGreen);
+
+        imgStream:= TMemoryStream.Create;
+        jpg:=TJpegImage.Create;
+        state :=  ConvertToState(lv_FaceList.Selected.SubItems.Strings[4]);
+        strUrl :=  lv_FaceList.Selected.SubItems.Strings[2];
+         if( state = 2) then
+         begin
+             imgStream := FDB_Controller.GetFaceImg(lv_FaceList.Selected.SubItems.Strings[1]);
+         end;
+         if ((imgStream = nil) and (imgStream.Size <= 0)) OR (state <> 2) then
+         begin
+            LHandler:=  TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+            self.IdHTTP1.IOHandler := LHandler;
+            self.IdHTTP1.Get(TIdURI.URLEncode(strUrl),imgStream);
+         end;
+         if (not (imgStream = nil)) and (imgStream.Size > 0) then
+         begin
+            imgStream.Position:=0;
+            jpg.LoadFromStream(imgStream);
+            self.imgPhoto.Picture.Assign(jpg);
+         end;
+    end ;
+end;
+
+procedure TfrmMain.lv_FaceListDblClick(Sender: TObject);
+Var
+  state :Integer;
+  strUrl:String;
+  imgStream: TMemoryStream;
+  jpg:TJpegImage;
+  LHandler: TIdSSLIOHandlerSocketOpenSSL;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+     if Assigned(lv_FaceList.Selected) then
+    begin
+        DebugPrint(lv_FaceList.Selected.SubItems.Strings[2], clGreen);
+
+        imgStream:= TMemoryStream.Create;
+        jpg:=TJpegImage.Create;
+        state :=  ConvertToState(lv_FaceList.Selected.SubItems.Strings[4]);
+        strUrl :=  lv_FaceList.Selected.SubItems.Strings[2];
+         if( state = 2) then
+         begin
+             imgStream := FDB_Controller.GetFaceImg(lv_FaceList.Selected.SubItems.Strings[1]);
+         end;
+         if ((imgStream = nil) and (imgStream.Size <= 0)) OR (state <> 2) then
+         begin
+            LHandler:=  TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+            self.IdHTTP1.IOHandler := LHandler;
+            self.IdHTTP1.Get(TIdURI.URLEncode(strUrl),imgStream);
+         end;
+         if (not (imgStream = nil)) and (imgStream.Size > 0) then
+         begin
+            imgStream.Position:=0;
+            jpg.LoadFromStream(imgStream);
+            self.imgPhoto.Picture.Assign(jpg);
+         end;
+    end ;
+end;
+
+procedure TfrmMain.btn_DBConfigClick(Sender: TObject);
+begin
+    if (MessageBox(0,'是否调整数据库链接配置？','警告',MB_ICONINFORMATION+MB_OkCancel)= idOk)  then
+    begin
+        frmConfigurate:=TfrmConfigurate.Create(self);
+        with frmConfigurate do
+        begin
+           ShowModal;
+           Free;
+        end;
+    end;
+end;
+
+procedure TfrmMain.btn_DownLoadALLClick(Sender: TObject);
+Var
+  index,Count :Integer;
+  item: TFaceInfo;
+  flag:Boolean;
+  list:TStringList;
+  strAccess:String;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+
+    if (MessageBox(0,'是否全部下载？','警告',MB_ICONINFORMATION+MB_OkCancel)= idOk)  then
+    begin
+        if(lv_FaceList.Items.Count <= 0) then
+        begin
+            DebugPrint('请获取需下载的记录！', clGreen);
+            Exit;
+        end;
+        DebugPrint('开始下载记录！', clGreen);
+        item := TFaceInfo.Create;
+        list := TStringList.Create;
+        Count:= 0;
+        strAccess:= GetAccessStr(Count);
+        if(Count > 6) OR (Count = 0) then
+        begin
+            DebugPrint('请确认权限分配是否符合！', clRed);
+            Common.WorkLogRecord('权限配置异常：Count=' + IntToStr(Count));
+            Exit;
+        end;
+        for index := 0 to lv_FaceList.Items.Count - 1 do
+        begin
+            item.Id := StrToIntDef(lv_FaceList.Items.Item[index].Caption ,0);
+            item.Name := lv_FaceList.Items.Item[index].SubItems.Strings[0];
+            item.TelNo := lv_FaceList.Items.Item[index].SubItems.Strings[1];
+            item.ImgUrl := lv_FaceList.Items.Item[index].SubItems.Strings[2];
+            item.Card := lv_FaceList.Items.Item[index].SubItems.Strings[3];
+            item.State := ConvertToState(lv_FaceList.Items.Item[index].SubItems.Strings[4]);
+            item.ApplyTime :=  VarToDateTime(lv_FaceList.Items.Item[index].SubItems.Strings[5]);
+            item.AccessCount := Count;
+            item.AccessPower := strAccess;
+            if(item.State = 1) then
+            begin
+                flag:= self.SaveToDB(item);
+                if(flag) then list.Add(IntToStr(item.Id));
+            end;
+        end;
+        if (not (list = nil)) AND (list.Count > 0) then
+        begin
+            DebugPrint(list.CommaText, clGreen);
+            flag := FFaceRegister.FaceApprove(list.CommaText,2);
+            if(flag) then
+            begin
+              DebugPrint('数据下载完成！', clGreen);
+              btn_GetDataClick(Sender);
+            end
+            else DebugPrint('更新服务器状态失败： ' + FFaceRegister.Msg ,clRed);
+        end;
+    end;
+end;
+
+procedure TfrmMain.btn_DownLoadClick(Sender: TObject);
+Var
+  index,Count :Integer;
+  item: TFaceInfo;
+  flag:Boolean;
+  list:TStringList;
+  strAccess:String;
+//  imgStream: TMemoryStream;
+//  jpg:TJpegImage;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    if (MessageBox(0,'是否下载选中值？','警告',MB_ICONINFORMATION+MB_OkCancel)= idOk)  then
+    begin
+      if(lv_FaceList.Items.Count <= 0) then
+      begin
+          DebugPrint('请获取需下载的记录！', clGreen);
+          Exit;
+      end;
+      DebugPrint('开始下载记录！', clGreen);
+      item := TFaceInfo.Create;
+      list := TStringList.Create;
+      Count:= 0;
+      strAccess:= GetAccessStr(Count);
+      if(Count > 6) OR (Count = 0) then
+      begin
+          DebugPrint('请确认权限分配是否符合！', clRed);
+          Common.WorkLogRecord('权限配置异常：Count=' + IntToStr(Count));
+          Exit;
+      end;
+
+      for index := 0 to lv_FaceList.Items.Count - 1 do
+      begin
+          if(lv_FaceList.Items.Item[index].Checked = true) then
+          begin
+              item.Id := StrToIntDef(lv_FaceList.Items.Item[index].Caption ,0);
+              item.Name := lv_FaceList.Items.Item[index].SubItems.Strings[0];
+              item.TelNo := lv_FaceList.Items.Item[index].SubItems.Strings[1];
+              item.ImgUrl := lv_FaceList.Items.Item[index].SubItems.Strings[2];
+              item.Card := lv_FaceList.Items.Item[index].SubItems.Strings[3];
+              item.State := ConvertToState(lv_FaceList.Items.Item[index].SubItems.Strings[4]);
+              item.ApplyTime :=  VarToDateTime(lv_FaceList.Items.Item[index].SubItems.Strings[5]);
+              item.AccessCount := Count;
+              item.AccessPower := strAccess;
+
+              if(item.State = 1) then
+              begin
+                  flag:= self.SaveToDB(item);
+                  if(flag) then list.Add(IntToStr(item.Id));
+              end;
+  //            imgStream:= TMemoryStream.Create;
+  //            jpg:=TJpegImage.Create;
+  //            self.IdHTTP1.Get('http://pic1.win4000.com/wallpaper/2020-01-10/5e17e0cf65ac6.jpg',imgStream);
+  //            item.Image:= imgStream;
+  //            FDB_Controller.SaveFaceInfo(item);
+  //            imgStream.Position:=0;
+  //            jpg.LoadFromStream(imgStream);
+  //            self.imgPhoto.Picture.Assign(jpg);
+  //            exit;
+          end;
+      end;
+      if (not (list = nil)) AND (list.Count > 0) then
+      begin
+          DebugPrint(list.CommaText, clGreen);
+          flag := FFaceRegister.FaceApprove(list.CommaText,2);
+          if(flag) then
+          begin
+            DebugPrint('数据下载完成！', clGreen);
+            btn_GetDataClick(Sender);
+          end
+          else DebugPrint('更新服务器状态失败： ' + FFaceRegister.Msg ,clRed);
+      end;
+    end;
+end;
+
+procedure TfrmMain.btn_GetDataClick(Sender: TObject);
+Var
+//  res:String;
+  list: TObjectList<TFaceInfo>;
+  item :  TFaceInfo;
+  listItem: TListItem;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    lv_FaceList.Items.Clear;
+    DebugPrint('开始获取远程服务器记录！', clGreen);
+    if not (Trim(txt_KeyWord.Text) = '') then
+    begin
+        FFaceRegister.KeyWord := Trim(txt_KeyWord.Text);
+        DebugPrint('查询关键字：' +  FFaceRegister.KeyWord, clGreen);
+    end;
+    FFaceRegister.State := ConvertState(cb_CheckState.ItemIndex);
+    DebugPrint('查询状态：' + IntToStr(FFaceRegister.State), clGreen);
+    list:=  TObjectList<TFaceInfo>.Create();
+    list.AddRange(FFaceRegister.GetFaceList());
+    if(list.Count > 0) then
+    begin
+      lv_FaceList.Items.BeginUpdate;
+      for item in list do
+      begin
+          with lv_FaceList do
+          begin
+            listItem := Items.Add;
+            listItem.caption:=IntToStr(item.Id);
+            listItem.subitems.Add(item.Name);
+            listItem.subitems.Add(item.TelNo);
+            listItem.subitems.Add(item.ImgUrl);
+            listItem.subitems.Add(item.Card);
+            listItem.subitems.Add(item.StateName);
+            listItem.subitems.Add(FormatDatetime('YYYY/MM/DD',item.ApplyTime));
+//            DebugPrint('当前记录：' + item.ToString, clBlue);
+//            if(item.State > 1) then
+          end;
+      end;
+      lv_FaceList.Items.EndUpdate;
+      DebugPrint('当前记录：' + IntToStr(list.Count), clBlue);
+      DebugPrint('当前页：' + IntToStr(FFaceRegister.CurrentPage), clBlue);
+      DebugPrint('总记录：' + IntToStr(FFaceRegister.TotalRecord), clBlue);
+      DebugPrint('总页数：' + IntToStr(FFaceRegister.TotalPage), clBlue);
+      if(FFaceRegister.CurrentPage < FFaceRegister.TotalPage) then btn_GetNextData.Enabled := true
+      else  btn_GetNextData.Enabled := false;
+    end
+    else
+    begin
+      DebugPrint(FFaceRegister.Msg, clRed);
+      DebugPrint('无返回数据，请确认查询参数是否异常或对应数据不存在！', clRed);
+//      FFaceRegister.Logout();
+//      btn_Login.Caption:='登录';
+////      DebugPrint(FFaceRegister.Msg, clBlue);
+//      DebugPrint('请重新登陆', clRed);
+//      FFaceRegister.Free;
+      btn_GetNextData.Enabled := false;
+      self.ti_AutoDownLoad.Enabled := false;
+    end;
+end;
+
+procedure TfrmMain.btn_GetNextDataClick(Sender: TObject);
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    if(FFaceRegister.CurrentPage >= FFaceRegister.TotalPage) then
+    begin
+      DebugPrint('已是最后页！' , clBlue);
+        FFaceRegister.CurrentPage :=  1;
+    end
+    else
+    begin
+        FFaceRegister.CurrentPage :=  FFaceRegister.CurrentPage + 1;
+        btn_GetDataClick(Sender);
+        if(FFaceRegister.CurrentPage >= FFaceRegister.TotalPage) then
+        begin
+            btn_GetNextData.Enabled := false;
+            FFaceRegister.CurrentPage :=  1;
+        end;
+    end;
+end;
+
+procedure TfrmMain.btn_LoginClick(Sender: TObject);
+Var
+    flag:Boolean;
+begin
+    self.AllButtonState(false);
+    try
+        if btn_Login.Caption='登录' then
+        begin
+            DebugPrint('远程服务器登录开始！', clGreen);
+            FFaceRegister :=  TServiceBase.Create();
+            flag :=  FFaceRegister.Login(Trim(txt_UserName.Text),Trim(txt_Password.Text));
+            if(flag) then
+            begin
+                DebugPrint('远程服务器登录成功！', clGreen);
+                DebugPrint('当前用户Cookie = ' + FFaceRegister.Cookie ,clBlue);
+                DebugPrint('当前用户AccessToken = ' + FFaceRegister.Token ,clBlue);
+                FFaceRegister.IsLogin := true;
+                btn_Login.Caption:='登出';
+                if not (ck_AutoDeal.Checked) then ti_AutoDownLoad.Enabled := false
+                else  ti_AutoDownLoad.Enabled := true;
+                self.lv_AccessList.Enabled := true;
+            end
+            else
+            begin
+               DebugPrint('远程服务器登录失败！', clGreen);
+            end;
+        end
+        else
+        begin
+            btn_Login.Caption:='登录';
+            FFaceRegister.Logout;
+            DebugPrint('退出成功!',clGreen);
+            FFaceRegister.Free;
+            self.ck_AutoDeal.Checked := false;
+            self.ti_AutoDownLoad.Enabled := false;
+            self.lv_AccessList.Enabled := false;
+        end;
+        self.ck_AutoDeal.Checked := false;
+    finally
+        self.AllButtonState(true);
+    end;
+end;
+
+procedure TfrmMain.btn_SearchFaceInfoClick(Sender: TObject);
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    self.AllButtonState(false);
+    GetFaceList;
+    self.AllButtonState(true);
+end;
+
+procedure TfrmMain.btn_ShowImgClick(Sender: TObject);
+Var
+  index :Integer;
+  item: TFaceInfo;
+//  flag:Boolean;
+//  list:TStringList;
+  imgStream: TMemoryStream;
+  jpg:TJpegImage;
+  LHandler: TIdSSLIOHandlerSocketOpenSSL;
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+//    self.AllButtonState(false);
+    item := TFaceInfo.Create;
+    for index := 0 to lv_FaceList.Items.Count - 1 do
+    begin
+        if(lv_FaceList.Items.Item[index].Checked = true) then
+        begin
+            try
+              imgStream:= TMemoryStream.Create;
+              jpg:=TJpegImage.Create;
+              item.Id := StrToIntDef(lv_FaceList.Items.Item[index].Caption ,0);
+              item.Name := lv_FaceList.Items.Item[index].SubItems.Strings[0];
+              item.TelNo := lv_FaceList.Items.Item[index].SubItems.Strings[1];
+              item.ImgUrl := lv_FaceList.Items.Item[index].SubItems.Strings[2];
+              item.Card := lv_FaceList.Items.Item[index].SubItems.Strings[3];
+              item.State := ConvertToState(lv_FaceList.Items.Item[index].SubItems.Strings[4]);
+              if(item.State = 2) then
+              begin
+                  imgStream := FDB_Controller.GetFaceImg(item.TelNo);
+              end;
+              if ((imgStream = nil) and (imgStream.Size <= 0)) OR (item.State <> 2) then
+              begin
+                  LHandler:=  TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+                  self.IdHTTP1.IOHandler := LHandler;
+                  self.IdHTTP1.Get(TIdURI.URLEncode(item.ImgUrl),imgStream);
+              end;
+              if (not (imgStream = nil)) and (imgStream.Size > 0) then
+              begin
+                imgStream.Position:=0;
+                jpg.LoadFromStream(imgStream);
+                self.imgPhoto.Picture.Assign(jpg);
+                DebugPrint('查询图片：'+ item.ToString, clBlue);
+                exit;
+              end
+              else continue;
+            except
+                continue;
+            end;
+        end;
+    end;
+//    self.AllButtonState(true);
+end;
+
+procedure TfrmMain.ck_AutoDealClick(Sender: TObject);
+begin
+    if not IsLoginSystem then
+    begin
+      Exit;
+    end;
+    if(ck_AutoDeal.Checked) then
+    begin
+       DebugPrint('开始自动执行下载任务！', clBlue);
+       self.AllButtonState(false);
+       self.ck_AutoDeal.Enabled := true;
+       self.ti_AutoDownLoad.Enabled := true;
+       self.lv_AccessList.Enabled := false;
+    end
+    else
+    begin
+       DebugPrint('关闭自动执行下载任务！', clBlue);
+       self.AllButtonState(true);
+       self.ti_AutoDownLoad.Enabled := false;
+       self.lv_AccessList.Enabled := true;
+    end;
+end;
+
+procedure TfrmMain.DebugPrint(StrText:String;Color:TColor);
+begin
+  REditDebug.SelAttributes.Color := Color;
+  REditDebug.Lines.Add(StrText);
+  REditDebug.Update;
+end;
+
+procedure TfrmMain.FormCreate(Sender: TObject);
+var
+    Error:String;
+    list:TList<TAccessInfo>;
+    item:TAccessInfo;
+    listItem: TListItem;
+    str:String;
+    arr:TArray<String>;
+    count,index:Integer;
+begin
+  cb_CheckState.ItemIndex := 1;
+  txt_UserName.Text := 'admin';
+  txt_Password.Text := 'admin';
+  txt_KeyWord.Text := '';
+
+  {$Region '服务器数据展示'}
+  lv_FaceList.Clear;
+  lv_FaceList.Columns.Clear;
+//  lv_FaceList.Items.BeginUpdate;
+  with lv_FaceList do
+  begin
+      Columns.Add;
+      Columns.Add;
+      Columns.Add;
+      Columns.Add;
+      Columns.Add;
+      Columns.Add;
+      Columns.Add;
+      ViewStyle:= vsReport;
+      GridLines:=true;
+      CheckBoxes:=true;
+      MultiSelect := True;
+      Columns.Items[0].Caption := '序号';
+      Columns.Items[1].Caption := '姓名';
+      Columns.Items[2].Caption := '手机';
+      Columns.Items[3].Caption := '人脸';
+      Columns.Items[4].Caption := '卡号';
+      Columns.Items[5].Caption := '状态';
+      Columns.Items[6].Caption := '时间';
+      Columns.Items[0].Width := 50;
+      Columns.Items[1].Width := 80;
+      Columns.Items[2].Width := 80;
+      Columns.Items[3].Width := 100;
+      Columns.Items[4].Width := 80;
+      Columns.Items[5].Width := 50;
+      Columns.Items[6].Width := 100;
+  end;
+  {$EndRegion}
+
+  {$REGION 'TDBBaseInfo'}
+  FDB_Controller:=TDBBaseInfo.Create;
+  Error:='';
+  if not FDB_Controller.DBConnect(Error) then
+  begin
+        DebugPrint(Error + ':请确认数据库链接配置是否正确！', clRed);
+        if (MessageBox(0,'是否调整数据库链接配置？','警告',MB_ICONINFORMATION+MB_OkCancel)= idOk)  then
+        begin
+          frmConfigurate := TfrmConfigurate.Create(nil);
+          try
+            if frmConfigurate.ShowModal=mrOK then
+            begin
+               ShowMessage('数据库参数已更新，请重新登录后台管理系统！');
+            end;
+            Application.Terminate;
+            Exit;
+          finally
+            frmConfigurate.Free;
+          end;
+        end;
+  end;
+  {$ENDREGION}
+
+  {$Region '权限展示'}
+//  count:=0;
+//  arr:= TArray<String>.Create;
+  lv_AccessList.Clear;
+  lv_AccessList.Columns.Clear;
+//  lv_FaceList.Items.BeginUpdate;
+  with lv_AccessList do
+  begin
+      Columns.Add;
+      Columns.Add;
+      ViewStyle:= vsReport;
+      GridLines:=true;
+      CheckBoxes:=true;
+      MultiSelect := True;
+      Columns.Items[0].Caption := '权限名称';
+      Columns.Items[1].Caption := '权限值';
+      Columns.Items[0].Width := 200;
+      Columns.Items[1].Width := 1;
+  end;
+  lv_AccessList.GridLines:= true;
+  list := TList<TAccessInfo>.Create;
+  list.AddRange(FDB_Controller.GetAccessList);
+  str:=Common.ReadAccess;
+  if(length(str) > 0) then arr:= TRegEx.Split(str,',');
+  count:= length(arr);
+  if list.Count > 0  then
+  begin
+      for item in list do
+      begin
+         with lv_AccessList do
+          begin
+            listItem := Items.Add;
+            listItem.caption:=item.Name;
+            listItem.subitems.Add(IntToStr(item.Num));
+            if(count > 0) then
+            begin
+                for index := 0 to count - 1 do
+                begin
+                    if(StrToInt(arr[index]) = item.Num) then
+                    begin
+                        listItem.Checked := true;
+                        break;
+                    end;
+                end;
+            end;
+          end;
+      end;
+  end;
+  self.lv_AccessList.Enabled := false;
+  {$EndRegion}
+  btn_SearchFaceInfo.Visible := false;
+  btn_ShowImg.Visible := false;
+  ck_AutoDeal.Checked := false;
+  ti_AutoDownLoad.Interval := Common.AUTO_TIMEINTERVAL * 1000;
+  if not (ck_AutoDeal.Checked) then ti_AutoDownLoad.Enabled := false
+  else  ti_AutoDownLoad.Enabled := true;
+end;
+
+procedure TfrmMain.GetFaceList;
+Var
+    list:TList<TFaceInfo>;
+    item:TFaceInfo;
+//    imgStream: TMemoryStream;
+//    jpg:TJpegImage;
+begin
+    list:=  TList<TFaceInfo>.Create;
+    FDB_Controller.GetFaceList(list);
+    for item in list do
+    begin
+        DebugPrint(item.ToString, clGreen);
+//        if(item.Id = 912345678)  then
+//        begin
+//            DebugPrint(item.ToString, clGreen);
+//            imgStream:= TMemoryStream.Create;
+//            imgStream:= item.Image;
+//            jpg:=TJpegImage.Create;
+//            imgStream.Position:=0;
+//            jpg.LoadFromStream(imgStream);
+//            self.imgPhoto.Picture.Assign(jpg);
+//        end;
+    end;
+end;
+//procedure TfrmMain.GetFaceImg(pNo:String);
+//begin
+//
+//end;
+
+procedure TfrmMain.GetAutoDealData();
+Var
+    list: TObjectList<TFaceInfo>;
+    item :  TFaceInfo;
+    flag : Boolean;
+    dealList,nos:TStringList;
+    strContent,strTime:String;
+    Count :Integer;
+    strAccess:String;
+begin
+    strTime := FormatDateTime('yyyy-MM-dd hh:nn:ss', Now);
+    strContent:=  strTime + ' 开始自动下载任务：';
+    Common.WorkLogRecord(strContent);
+    try
+        Count:= 0;
+        strAccess:= GetAccessStr(Count);
+        if(Count > 6) Or (Count = 0) then
+        begin
+              DebugPrint('请确认权限分配是否符合！', clRed);
+              Common.WorkLogRecord('权限配置异常：Count=' + IntToStr(Count));
+              Exit;
+        end;
+        list:=  TObjectList<TFaceInfo>.Create();
+        list.AddRange(FFaceRegister.GetFaceList(1,Common.AUTO_DEALNUM,1));
+        if(list.Count > 0) then
+        begin
+          dealList := TStringList.Create;
+          nos:= TStringList.Create;
+          for item in list do
+          begin
+              if(item.State = 1) then
+              begin
+                  item.AccessCount := Count;
+                  item.AccessPower := strAccess;
+                  flag:= self.SaveToDB(item);
+                  if(flag) then
+                  begin
+                      dealList.Add(IntToStr(item.Id));
+                      nos.Add(item.TelNo);
+                      strContent:= '已下载数据：人员ID=' + item.TelNo + ';姓名=' + item.Name + ';';
+                      Common.WorkLogRecord(strContent);
+                  end;
+              end;
+          end;
+          if (not (dealList = nil)) AND (dealList.Count > 0) then
+            begin
+                DebugPrint(dealList.CommaText, clGreen);
+                flag := FFaceRegister.FaceApprove(dealList.CommaText,2);
+                if(flag) then
+                begin
+                    DebugPrint('数据下载完成！', clGreen);
+                    strContent:= '本次下载用户工号为：' + nos.CommaText + ';';
+                end
+                else
+                begin
+                    DebugPrint('更新服务器状态失败： ' + FFaceRegister.Msg ,clRed);
+                    strContent:= '本次下载更新服务器状态失败用户手机号为：' + nos.CommaText + ';';
+                end;
+                Common.WorkLogRecord(strContent);
+            end;
+        end
+        else
+        begin
+             strContent:= '当前没有需要下载的数据！';
+             DebugPrint(strContent ,clGreen);
+             Common.WorkLogRecord(strContent);
+        end;
+    finally
+        strContent:=  strTime + ' 本次下载任务结束';;
+        Common.WorkLogRecord(strContent);
+    end;
+end;
+//function TfrmMain.CheckServiceLink():Boolean;
+//begin
+//
+//end;
+procedure TfrmMain.AllButtonState(flag:Boolean = true);
+begin
+    self.btn_Login.Enabled := flag;
+    self.btn_GetData.Enabled := flag;
+    self.btn_DownLoad.Enabled := flag;
+    self.btn_SearchFaceInfo.Enabled := flag;
+    self.btn_GetNextData.Enabled := flag;
+    self.btn_DownLoadALL.Enabled := flag;
+    self.btn_ShowImg.Enabled := flag;
+    self.ck_AutoDeal.Enabled := flag;
+    self.btn_DBConfig.Enabled := flag;
+    self.lv_AccessList.Enabled := flag;
+end;
+
+function TfrmMain.GetAccessStr(var count:Integer):String;
+Var
+    index :Integer;
+    str:String;
+begin
+    str:='';
+    count := 0;
+    for index := 0 to self.lv_AccessList.Items.Count - 1 do
+    begin
+        if(lv_AccessList.Items.Item[index].Checked = true) then
+        begin
+            str:= str + lv_AccessList.Items.Item[index].SubItems.Strings[0] + ',';
+            count := count + 1;
+        end;
+    end;
+    result := str;
+end;
+
+end.

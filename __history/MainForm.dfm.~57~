@@ -1,0 +1,320 @@
+object frmMain: TfrmMain
+  Left = 0
+  Top = 0
+  Caption = 'frmMain'
+  ClientHeight = 602
+  ClientWidth = 1092
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Panel1: TPanel
+    Left = 0
+    Top = 0
+    Width = 739
+    Height = 602
+    Align = alLeft
+    TabOrder = 0
+    object Panel4: TPanel
+      Left = 1
+      Top = 1
+      Width = 737
+      Height = 203
+      Align = alTop
+      TabOrder = 0
+      object Label2: TLabel
+        Left = 30
+        Top = 20
+        Width = 36
+        Height = 13
+        Caption = #36134#21495#65306
+      end
+      object Label24: TLabel
+        Left = 30
+        Top = 50
+        Width = 36
+        Height = 13
+        Caption = #23494#30721#65306
+      end
+      object Label1: TLabel
+        Left = 30
+        Top = 100
+        Width = 36
+        Height = 13
+        Caption = #29366#24577#65306
+      end
+      object Label3: TLabel
+        Left = 30
+        Top = 130
+        Width = 48
+        Height = 13
+        Caption = #20851#38190#23383#65306
+      end
+      object txt_UserName: TEdit
+        Left = 80
+        Top = 17
+        Width = 121
+        Height = 21
+        TabOrder = 0
+        Text = 'admin'
+      end
+      object txt_Password: TEdit
+        Left = 80
+        Top = 47
+        Width = 121
+        Height = 21
+        PasswordChar = '*'
+        TabOrder = 1
+        Text = 'admin'
+      end
+      object btn_Login: TButton
+        Left = 505
+        Top = 45
+        Width = 96
+        Height = 25
+        Caption = #30331#24405
+        TabOrder = 2
+        OnClick = btn_LoginClick
+      end
+      object btn_GetData: TButton
+        Left = 505
+        Top = 125
+        Width = 96
+        Height = 25
+        Caption = #33719#21462#25968#25454
+        TabOrder = 3
+        OnClick = btn_GetDataClick
+      end
+      object cb_CheckState: TComboBox
+        Left = 80
+        Top = 97
+        Width = 100
+        Height = 21
+        TabOrder = 4
+        Items.Strings = (
+          #26410#22788#29702
+          #24050#23457#26680
+          #24050#22788#29702
+          #24050#25298#32477
+          #20840#37096)
+      end
+      object txt_KeyWord: TEdit
+        Left = 80
+        Top = 127
+        Width = 121
+        Height = 21
+        TabOrder = 5
+      end
+      object btn_DownLoad: TButton
+        Left = 505
+        Top = 164
+        Width = 96
+        Height = 25
+        Caption = #19979#36733#25968#25454
+        TabOrder = 6
+        OnClick = btn_DownLoadClick
+      end
+      object btn_SearchFaceInfo: TButton
+        Left = 607
+        Top = 88
+        Width = 96
+        Height = 25
+        Caption = #26597#35810#25968#25454
+        TabOrder = 7
+        OnClick = btn_SearchFaceInfoClick
+      end
+      object btn_GetNextData: TButton
+        Left = 607
+        Top = 125
+        Width = 96
+        Height = 25
+        Caption = #19979#19968#39029#25968#25454
+        TabOrder = 8
+        OnClick = btn_GetNextDataClick
+      end
+      object btn_DownLoadALL: TButton
+        Left = 607
+        Top = 164
+        Width = 96
+        Height = 25
+        Caption = #20840#37096#19979#36733
+        TabOrder = 9
+        OnClick = btn_DownLoadALLClick
+      end
+      object btn_ShowImg: TButton
+        Left = 505
+        Top = 88
+        Width = 96
+        Height = 25
+        Caption = #26597#30475#22270#29255
+        TabOrder = 10
+        OnClick = btn_ShowImgClick
+      end
+      object ck_AutoDeal: TCheckBox
+        Left = 30
+        Top = 172
+        Width = 275
+        Height = 17
+        Caption = #33258#21160#19979#36733#65288#21246#36873#21518#33258#21160#22788#29702#24050#23457#26680#25968#25454#65289
+        TabOrder = 11
+        OnClick = ck_AutoDealClick
+      end
+      object btn_DBConfig: TButton
+        Left = 607
+        Top = 45
+        Width = 96
+        Height = 25
+        Caption = #37197#32622
+        TabOrder = 12
+        OnClick = btn_DBConfigClick
+      end
+      object btn_AccessLock: TButton
+        Left = 403
+        Top = 164
+        Width = 96
+        Height = 25
+        Caption = #40664#35748#26435#38480#37197#32622
+        TabOrder = 13
+        OnClick = btn_AccessLockClick
+      end
+    end
+    object Panel5: TPanel
+      Left = 1
+      Top = 204
+      Width = 737
+      Height = 397
+      Align = alClient
+      TabOrder = 1
+      object GroupBox1: TGroupBox
+        Left = 1
+        Top = 1
+        Width = 529
+        Height = 395
+        Align = alLeft
+        Caption = #26381#21153#22120#20154#33080#27880#20876#20449#24687
+        Ctl3D = False
+        ParentCtl3D = False
+        TabOrder = 0
+        object lv_FaceList: TListView
+          Left = 1
+          Top = 14
+          Width = 527
+          Height = 380
+          Align = alClient
+          Columns = <>
+          Ctl3D = True
+          GridLines = True
+          RowSelect = True
+          ShowColumnHeaders = False
+          TabOrder = 0
+          ViewStyle = vsReport
+          OnClick = lv_FaceListClick
+          OnDblClick = lv_FaceListDblClick
+        end
+      end
+      object GroupBox2: TGroupBox
+        Left = 530
+        Top = 1
+        Width = 206
+        Height = 395
+        Align = alClient
+        Caption = #26435#38480#37197#32622
+        TabOrder = 1
+        object lv_AccessList: TListView
+          Left = 2
+          Top = 15
+          Width = 202
+          Height = 378
+          Align = alClient
+          Columns = <>
+          RowSelect = True
+          ShowColumnHeaders = False
+          TabOrder = 0
+          OnClick = lv_FaceListClick
+          OnDblClick = lv_FaceListDblClick
+        end
+      end
+    end
+  end
+  object Panel2: TPanel
+    Left = 739
+    Top = 0
+    Width = 353
+    Height = 602
+    Align = alClient
+    TabOrder = 1
+    object imgPhoto: TImage
+      Left = 1
+      Top = 279
+      Width = 351
+      Height = 322
+      Align = alBottom
+      Stretch = True
+      ExplicitLeft = 4
+      ExplicitTop = 284
+      ExplicitWidth = 361
+    end
+    object Panel3: TPanel
+      Left = 1
+      Top = 1
+      Width = 351
+      Height = 278
+      Align = alClient
+      TabOrder = 0
+      object btn_Clear: TButton
+        Left = 1
+        Top = 1
+        Width = 349
+        Height = 25
+        Align = alTop
+        Caption = #28165#38500
+        TabOrder = 0
+        OnClick = btn_ClearClick
+      end
+      object REditDebug: TRichEdit
+        Left = 1
+        Top = 26
+        Width = 349
+        Height = 251
+        Align = alClient
+        Font.Charset = GB2312_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        ScrollBars = ssVertical
+        TabOrder = 1
+      end
+    end
+  end
+  object IdHTTP1: TIdHTTP
+    AllowCookies = True
+    ProxyParams.BasicAuthentication = False
+    ProxyParams.ProxyPort = 0
+    Request.ContentLength = -1
+    Request.ContentRangeEnd = -1
+    Request.ContentRangeStart = -1
+    Request.ContentRangeInstanceLength = -1
+    Request.Accept = 'text/html, */*'
+    Request.BasicAuthentication = False
+    Request.UserAgent = 'Mozilla/3.0 (compatible; Indy Library)'
+    Request.Ranges.Units = 'bytes'
+    Request.Ranges = <>
+    HTTPOptions = [hoForceEncodeParams]
+    Left = 248
+    Top = 72
+  end
+  object ti_AutoDownLoad: TTimer
+    Interval = 60000
+    OnTimer = ti_AutoDownLoadTimer
+    Left = 248
+    Top = 24
+  end
+end

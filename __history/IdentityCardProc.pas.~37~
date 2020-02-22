@@ -1,0 +1,178 @@
+unit IdentityCardProc;
+
+interface
+Uses
+    HikGlobalFunc,HCUsbSDK,Windows,SysUtils,Classes;
+Const
+    IMAGE_FOLDER = 'images';
+    IMAGE_FILE = 'temp_chineseIDpicture.bmp';
+    BIN_FILE = 'temp_chineseIDpicture.bin';
+
+Type
+    TChinaIdentity=class(TObject)
+    Private
+        FCertificateInfo: USB_SDK_CERTIFICATE_INFO;
+        FIsPicDone,FIsReader:Boolean;
+        FPicAddr:String;
+    Protected
+    Public
+        constructor Create();
+
+        property CertificateInfo :USB_SDK_CERTIFICATE_INFO read FCertificateInfo write FCertificateInfo;
+        property IsPicDone :Boolean read FIsPicDone write FIsPicDone;
+        property IsReader :Boolean read FIsReader write FIsReader;
+        property PicAddr :String read FPicAddr write FPicAddr;
+        //姓名获取
+        Function ReadChineseIDcardName():String;
+        //图片处理
+        Procedure IDpictureProcess();
+        //旧图处理
+        Procedure DeleteOldPicture();
+        //性别获取
+        Function ReadChineseCardSex():String;
+        //民族获取
+        Function ReadChineseNationality():String;
+        //出生日期获取
+        Function ReadBirthDate():String;
+        //居住地获取
+        Function ReadHomeAddress():String;
+        //身份证号获取
+        Function ReadIDnum():String;
+    end;
+implementation
+{$Region '中国身份证识别操作'}
+constructor TChinaIdentity.Create();
+begin
+    inherited;
+    self.FCertificateInfo.dwSize :=  SizeOf(USB_SDK_CERTIFICATE_INFO);
+    self.FIsPicDone := false;
+    self.FIsReader:= false;
+    self.FPicAddr := '';
+end;
+
+Function TChinaIdentity.ReadChineseIDcardName():String;
+Var
+    bName:array[0..31] of byte;
+begin
+    Result := '';
+    if(self.IsReader)  then
+    begin
+        ZeroMemory(@bName,32);
+        copyMemory(@bName, @self.CertificateInfo.byWordInfo,30);
+        Result := trim(StrPas(Pchar(@bName)));
+    end;
+end;
+
+Function TChinaIdentity.ReadChineseCardSex():String;
+Var
+    bSex:array[0..3] of byte;
+begin
+    if(self.IsReader)  then
+    begin
+        ZeroMemory(@bSex,4);
+        copyMemory(@bSex, @self.CertificateInfo.byWordInfo[30],2);
+//        Result := trim(StrPas(Pchar(@bSex)));
+        if(trim(StrPas(Pchar(@bSex))) = '1') then Result := '男'
+        else Result := '女';
+    end;
+end;
+
+Function TChinaIdentity.ReadChineseNationality():String;
+Var
+    bNationality:array[0..7] of byte;
+begin
+    if(self.IsReader)  then
+    begin
+        ZeroMemory(@bNationality,8);
+        copyMemory(@bNationality, @self.CertificateInfo.byWordInfo[32],4);
+        Result := trim(StrPas(Pchar(@bNationality)));
+    end;
+end;
+
+Function TChinaIdentity.ReadBirthDate():String;
+ Var
+    bBirth:array[0..15] of byte;
+    strBirth: String;
+begin
+    if(self.IsReader)  then
+    begin
+        ZeroMemory(@bBirth,16);
+        copyMemory(@bBirth, @self.CertificateInfo.byWordInfo[36],16);
+        strBirth := trim(StrPas(Pchar(@bBirth)));
+        Result:= Copy(strBirth,0,4) + '-' + Copy(strBirth,4,2)  + '-' + Copy(strBirth,6,2);
+    end;
+end;
+
+Function TChinaIdentity.ReadHomeAddress():String;
+Var
+    bAddress:array[0..71] of byte;
+begin
+    if(self.IsReader)  then
+    begin
+        ZeroMemory(@bAddress,72);
+        copyMemory(@bAddress, @self.CertificateInfo.byWordInfo[52],70);
+        Result := trim(StrPas(Pchar(@bAddress)));
+    end;
+end;
+
+Function TChinaIdentity.ReadIDnum():String;
+Var
+    bIds:array[0..35] of byte;
+begin
+    if(self.IsReader)  then
+    begin
+        ZeroMemory(@bIds,36);
+        copyMemory(@bIds, @self.CertificateInfo.byWordInfo[122],36);
+        Result := trim(StrPas(Pchar(@bIds)));
+    end;
+end;
+
+Procedure TChinaIdentity.IDpictureProcess();
+Var
+    path:String;
+    mStream : TMemoryStream;
+begin
+    mStream:=TMemoryStream.Create;
+    try
+        if not(self.IsReader) then Exit;
+        DeleteOldPicture;
+        path:= ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER + '\' + BIN_FILE;
+        if not DirectoryExists(ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER) then
+        begin
+            MkDir(ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER);
+        end;
+        mStream.Seek(0,soFromBeginning);
+        mStream.Write(self.CertificateInfo.byPicInfo,self.CertificateInfo.wPicInfoSize);
+        mStream.Position :=0;
+
+        mstream.SaveToFile(path);
+        dewlt(PAnsichar(AnsiString(path)));
+        self.IsPicDone := true;
+        self.PicAddr :=  ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER + '\' + IMAGE_FILE;
+    finally
+        mstream.Free;
+    end;
+end;
+
+Procedure TChinaIdentity.DeleteOldPicture();
+Var
+    path:String;
+    flag:Boolean;
+begin
+    try
+        path:= ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER + '\' + IMAGE_FILE;
+        if not DirectoryExists(ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER) then
+        begin
+            MkDir(ExtractFilePath(ParamStr(0)) + IMAGE_FOLDER);
+        end;
+        if FileExists(path) then
+        begin
+            flag := DeleteFile(path);
+        end;
+    finally
+        self.IsPicDone := false;
+        self.PicAddr :=  '';
+    end;
+end;
+{$EndRegion}
+end.

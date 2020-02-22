@@ -1,0 +1,79 @@
+object frmMain: TfrmMain
+  Left = 0
+  Top = 0
+  Margins.Left = 4
+  Margins.Top = 4
+  Margins.Right = 4
+  Margins.Bottom = 4
+  Caption = 'frmMain'
+  ClientHeight = 448
+  ClientWidth = 722
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  Padding.Left = 4
+  Padding.Top = 4
+  Padding.Right = 4
+  Padding.Bottom = 4
+  OldCreateOrder = False
+  Visible = True
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Panel1: TPanel
+    Left = 4
+    Top = 4
+    Width = 501
+    Height = 440
+    Align = alLeft
+    TabOrder = 0
+    object Panel2: TPanel
+      Left = 1
+      Top = 1
+      Width = 499
+      Height = 72
+      Align = alTop
+      TabOrder = 0
+      ExplicitTop = -5
+      ExplicitWidth = 407
+      object btn_Start: TButton
+        Left = 24
+        Top = 24
+        Width = 75
+        Height = 25
+        Margins.Left = 4
+        Margins.Top = 4
+        Margins.Right = 4
+        Margins.Bottom = 4
+        Caption = #21551'    '#21160
+        TabOrder = 0
+        OnClick = btn_StartClick
+      end
+      object btn_CatchImg: TButton
+        Left = 128
+        Top = 24
+        Width = 75
+        Height = 25
+        Margins.Left = 4
+        Margins.Top = 4
+        Margins.Right = 4
+        Margins.Bottom = 4
+        Caption = #25235'    '#22270
+        TabOrder = 1
+      end
+    end
+    object pal_CameraArea: TPanel
+      Left = 1
+      Top = 73
+      Width = 499
+      Height = 366
+      Align = alClient
+      TabOrder = 1
+      ExplicitTop = 79
+      ExplicitWidth = 407
+    end
+  end
+end

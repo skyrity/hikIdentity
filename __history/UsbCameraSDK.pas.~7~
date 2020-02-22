@@ -1,0 +1,124 @@
+unit UsbCameraSDK;
+
+interface
+Uses
+    Types,Winapi.Messages,windows;
+
+Const
+    {$REGION '配置命令定义'}
+    USBCAMERA_GET_VIDEO_CAP       = 1;                  // 获取视频能力集
+    USBCAMERA_GET_AUDIO_CAP       = 2;                  // 获取音频能力集
+    USBCAMERA_GET_VIDEO_FORMAT    = 3;                  // 获取视频码流格式
+    USBCAMERA_SET_VIDEO_FORMAT    = 4;                  // 获取视频码流格式
+    USBCAMERA_GET_AUDIO_FORMAT    = 5;                  // 获取音频码流格式
+    USBCAMERA_SET_AUDIO_FORMAT    = 6;                  // 设置音频码流格式
+    USBCAMERA_GET_RESOLUTION      = 7;                  // 获取视频分辨率
+    USBCAMERA_SET_RESOLUTION      = 8;                  //设置视频分辨率
+    USBCAMERA_SET_FRAMERATE       = 10;                 //设置视频帧率
+    USBCAMERA_SET_SRCSTREAMTYPE   = 16;                 // 设置原始码流类型
+    {$ENDREGION}
+    {$REGION '码流类型: 视频+(音频)码流'}
+    (************************************************************************
+        *
+    ************************************************************************)
+    USBCAMERA_STREAM_MJPEG        = 101;                // MJPEG裸码流
+    USBCAMERA_STREAM_YUV          = 102;                // YUV裸码流
+    USBCAMERA_STREAM_H264         = 103;                // H264裸码流(需相机支持H264裸流输出)
+    USBCAMERA_STREAM_PS_H264      = 104;                // PS封装H264码流
+    USBCAMERA_STREAM_PS_MJPEG     = 105;                // PS封装H264+PCM码流
+    {$ENDREGION}
+     MAX_PATH                     = 260;
+     SDK_FILE                     = 'USBSdkLog';
+     IMAGE_FILE                   = 'images';
+//     {$REGION '日志级别'}
+//     ERROR_LEVEL                  = 1;                  //ERROR级别（只输出ERROR信息）
+//     DEBUG_LEVEL                  = 2;                  //DEBUG级别（输出DEBUG信息 + ERROR信息）
+//     INFO_LEVEL                   = 3;                  //INFO级别（输出INFO信息 + DEBUG信息 + ERROR信息）
+//     {$ENDREGION}
+Type
+    {$REGION 'Enum'}
+    LOG_LEVEL_ENUM=( ENUM_ERROR_LEVEL = 1,           //ERROR级别（只输出ERROR信息）
+                        ENUM_DEBUG_LEVEL = 2,           //DEBUG级别（输出DEBUG信息 + ERROR信息）
+                        ENUM_INFO_LEVEL = 3);           //INFO级别（输出INFO信息 + DEBUG信息 + ERROR信息）
+    {$ENDREGION}
+
+    {$REGION '结构体'}
+    LPUSB_CAMERA_DEVICE_INFO_EXTEN = ^USB_CAMERA_DEVICE_INFO_EXTEN;
+    USB_CAMERA_DEVICE_INFO_EXTEN = RECORD
+        nIndex      :   INTEGER;
+        cDevPath    :   ARRAY[0..MAX_PATH-1] of BYTE;
+        cDevName    :   ARRAY[0..MAX_PATH-1] of BYTE;
+        bHaveAudio  :   BYTE;
+        byRes       :   ARRAY[0..30] of BYTE;
+    end;
+
+    LPUSB_CAMERA_CONFIG = ^USB_CAMERA_CONFIG;
+    USB_CAMERA_CONFIG  = RECORD
+        pCondBuf    :   POINTER;                        //[in]，条件数据指针，如表示通道号等
+        dwCondSize  :   LONGWORD;                       //[in]，pCondBuf指向的数据大小
+        pInBuf      :   POINTER;                        //[in]，设置时需要用到，指向结构体的指针\
+        dwInSize    :   LONGWORD;                       //[in], pInBuf指向的数据大小
+        pOutBuf     :   POINTER;                        //[out]，获取时需要用到，指向结构体的指针，内存由上层分配
+        dwOutSize   :   LONGWORD;                       //[in]，获取时需要用到，表示pOutBuf指向的内存大小，
+        byRes       :   ARRAY[0..39] of BYTE;           //保留
+    end;
+    LPUSB_CAMERA_PREVIEW_PARAM = ^USB_CAMERA_PREVIEW_PARAM;
+    USB_CAMERA_PREVIEW_PARAM = RECORD
+        dwSize      :   LONGWORD;
+        dwStreamType:   LONGWORD;                       //码流类型
+        hWindow     :   POINTER;                        //窗口句柄
+        bUseFD      :   BOOLEAN;                        // 是否开启人脸检测
+        bUseAudio   :   BOOLEAN;                        //是否预览音频
+        byRes       :   ARRAY[0..19] of BYTE;           //保留
+    END;
+    LPUSB_CAMERA_CAPTURE_PARAM = ^USB_CAMERA_CAPTURE_PARAM;
+    USB_CAMERA_CAPTURE_PARAM =  RECORD
+        dwSize      :   LONGWORD;
+        dwStreamType:   LONGWORD;
+        pBuf        :   POINTER;
+        dwBufSize   :   LONGWORD;
+        dwDataLen   :   LONGWORD;
+        szFilePath  :   ARRAY[0..MAX_PATH-1] of BYTE;   // 图片文件存储路径
+        bCaptureFacePic:BOOLEAN;                        // 是否抓拍人脸图片
+        byRes       :   ARRAY[0..39] of BYTE;           //保留
+    END;
+    LPUSB_CAMERA_SRC_STREAM_CFG = ^USB_CAMERA_SRC_STREAM_CFG;
+    USB_CAMERA_SRC_STREAM_CFG = RECORD
+        dwStreamType:   INTEGER;                        // 原始码流类型
+        bUseAudio   :   BOOLEAN;                        // 是否使用音频
+        byRes       :   ARRAY[0..3] of BYTE;            //保留
+    END;
+    LPMEDIA_RESOLUTION_INFO = ^MEDIA_RESOLUTION_INFO;
+    MEDIA_RESOLUTION_INFO =  RECORD
+        dwWidth     :   INTEGER;
+        dwHeight    :   INTEGER;
+    END;
+    {$ENDREGION}
+
+    {$REGION 'dllimport'}
+    FUNCTION USBCamera_Init():BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_SetLogToFile(dwLogLevel:INTEGER;pLogDir:STRING;bAutoDel:BOOLEAN):BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_Fini():BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_EnumDevice(lpDevInfoList:POINTER;dwSize:INTEGER):INTEGER;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_SetConfig(handle,dwCommand:INTEGER;lpConfigint:POINTER;dwConfigSize:INTEGER):BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_GetConfig(handleint,dwCommand:INTEGER;lpConfig:POINTER;dwConfigSize:INTEGER):BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_OpenDevice(iIndex:INTEGER):INTEGER;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_CloseDevice(iGraphHandle,iIndex:INTEGER):BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_StartPreview(handle:INTEGER;lpPreviewParam:LPUSB_CAMERA_PREVIEW_PARAM):INTEGER;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_Capture(handle:INTEGER;lpCaptuerParam:LPUSB_CAMERA_CAPTURE_PARAM):BOOLEAN;stdcall;external 'USBCameraSDK.dll';
+
+    FUNCTION USBCamera_GetLastError():INT64;stdcall;external 'USBCameraSDK.dll';
+    {$ENDREGION}
+
+implementation
+
+end.

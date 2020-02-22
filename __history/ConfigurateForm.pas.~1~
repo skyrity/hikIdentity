@@ -1,0 +1,83 @@
+unit ConfigurateForm;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,IniFiles;
+
+type
+  TfrmConfigurate = class(TForm)
+    Label2: TLabel;
+    txtUser: TEdit;
+    txtPassword: TEdit;
+    Label24: TLabel;
+    Label1: TLabel;
+    txtIP: TEdit;
+    Label3: TLabel;
+    txtDbName: TEdit;
+    btnOK: TButton;
+    btnCancel: TButton;
+    procedure btnOKClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private declarations }
+    procedure ReadIni;
+    procedure WriteIni;
+
+  public
+    { Public declarations }
+  end;
+
+var
+  frmConfigurate: TfrmConfigurate;
+
+implementation
+
+{$R *.dfm}
+
+
+
+procedure TfrmConfigurate.ReadIni;
+var
+ ini:TIniFile;
+begin
+  ini:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+  try
+     txtIP.Text:=ini.ReadString('System','ServerIP','127.0.0.1');
+     txtDBName.Text:=ini.ReadString('System','DBName','Sky2010');
+     txtUser.Text:=ini.ReadString('System','User','sa');
+     txtPassword.Text:=ini.ReadString('System','Password','');
+  finally
+     ini.Free;
+  end;
+end;
+
+
+procedure TfrmConfigurate.WriteIni;
+var
+ ini:TIniFile;
+begin
+  ini:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+  try
+     ini.WriteString('System','ServerIP',txtIP.Text);
+     ini.WriteString('System','DBName',txtDBName.Text);
+     ini.WriteString('System','User',txtUser.Text);
+     ini.WriteString('System','Password',txtPassword.Text);
+
+  finally
+     ini.Free;
+  end;
+end;
+procedure TfrmConfigurate.btnOKClick(Sender: TObject);
+begin
+   WriteIni;
+end;
+
+procedure TfrmConfigurate.FormCreate(Sender: TObject);
+begin
+  ReadIni;
+
+end;
+
+end.

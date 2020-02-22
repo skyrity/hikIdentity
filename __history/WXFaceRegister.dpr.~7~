@@ -1,0 +1,22 @@
+program WXFaceRegister;
+
+
+
+uses
+  Vcl.Forms,
+  MainForm in 'MainForm.pas' {frmMain},
+  FaceRegister in 'FaceRegister.pas',
+  Common in 'Common.pas',
+  DataHelper in 'DataHelper.pas',
+  Ping in 'Ping.pas',
+  ConfigurateForm in 'ConfigurateForm.pas' {frmConfigurate};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TfrmMain, frmMain);
+  Application.CreateForm(TfrmConfigurate, frmConfigurate);
+  Application.Run;
+end.

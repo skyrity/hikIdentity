@@ -1,0 +1,278 @@
+﻿unit Common;
+
+interface
+
+Uses
+    SysUtils,IdHTTP,IdSSLOpenSSL,Classes,DBXJSON,idURI,IniFiles;
+Const
+  HOST = 'www.skyrity.cn';
+  API_LOGIN = 'https://%host%/SkyFaceRegister/login.do';
+  API_LOGOUT = 'https://%host%/SkyFaceRegister/logout.do';
+  PARAMS_LOGIN = 'userName=%name%&password=%password%';
+  PARAMS_LOGOUT = 'accessToken=%accessToken%';
+  API_GETFACE ='https://%host%/SkyFaceRegister/getfaces.do';
+  API_APPROVESTATE ='https://%host%/SkyFaceRegister/approve.do';
+  PARAMS_GETFACE = 'accessToken=%accessToken%&state=%state%&fields=%fields%&pageSize=%pageSize%&pageNum=%pageNum%';
+  PARAMS_APPROVESTATE = 'accessToken=%accessToken%&ids=%ids%&isPass=%isPass%';
+
+  CHECK_STATE_ALL = -1;
+  CHECK_STATE_WAIT = 0;
+  CHECK_STATE_DONE = 1;
+  CHECK_STATE_DEAL = 2;
+  CHECK_STATE_REJECT = 3;
+  AUTO_DEALNUM = 10;
+  AUTO_TIMEINTERVAL = 10;         //秒
+  LOG_DIR = 'logs';
+  LOG_SEARCH = 'SeachDataLog';
+  LOG_DOWNLOAD = 'DownLoadLog';
+    //http提交数据
+    //AURL:访问的接口地址
+    //AParam:提交的参数
+    //RevStrData:返回的数据
+    //Result:True成功;False失败
+    function HttpPost(Const AURL,AParam,AHeader:String;var RevStrData:String):Boolean;
+
+    function HttpPut(Const AURL,AParam:String;var RevStrData:String):Boolean;
+
+    function HttpGet(Const AUrl:String;var RevData:TMemoryStream):Boolean;
+
+    function HttpDelete(Const AURL:String):Boolean;
+    //更换字符串
+    //S：更换的内容
+    //OldPattern：需要替换的目标
+    //NewPattern：替换后的文字
+    //Result:更换后的新字符串
+    function Replacing(const S,OldPattern,NewPattern:String):String;
+    //获取查询状态
+    function ConvertState(state:Integer):Integer;
+    function ConvertToState(state:String):Integer;
+    function WorkLogRecord(strContent:String;fileName:String = LOG_DOWNLOAD):Boolean;
+    procedure WriteAccess(strAccess:String);
+    function ReadAccess():String;
+implementation
+
+/////////////////////////////////////////
+//http提交数据
+function HttpPost(Const AURL,AParam,AHeader:String;var RevStrData:String):Boolean;
+var
+  mIdHTTP:TIdcustomHTTP;
+  sRevStrData:String;
+  SendStream,ResponseStream: TStringStream;
+  LHandler: TIdSSLIOHandlerSocketOpenSSL;
+//  JsonObj: TJSONObject;
+//  JPair : TJSONPair;
+begin
+  if(Length(AURL)<=0)Then begin Result:=False;Exit;end;
+  mIdHTTP:=TIdhttp.Create(nil);
+  SendStream:=TStringStream.Create(AParam);
+  LHandler:=  TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  ResponseStream := TStringstream.Create('',TEncoding.UTF8);
+  try
+    mIdHTTP := TIdHTTP.Create(nil);
+    mIdHTTP.IOHandler := LHandler;
+    mIdHTTP.HandleRedirects := true;
+    mIdHTTP.ReadTimeout := 5000;
+//    mIdHTTP.Request.Accept := 'text/javascript';
+    mIdHTTP.Request.ContentType := 'application/x-www-form-urlencoded;charset=utf-8';
+    mIdHTTP.Request.CustomHeaders.Values['Cookie'] := AHeader;
+//    mIdHTTP.Request.ContentEncoding := 'utf-8';
+    try
+      mIdHTTP.Post(TIdURI.URLEncode(AURL),SendStream,ResponseStream);
+//      UTF8Decode(IdHTTP1.Response.RawHeaders.Text);
+      sRevStrData := ResponseStream.DataString;
+//      JsonObj := TJSONObject.ParseJSONValue(sRevStrData) as TJSONObject;
+//      JPair :=  JsonObj.Get('result_data');
+//      JsonObj := TJSONObject.ParseJSONValue(JPair.JsonValue.ToString) as TJSONObject;
+//      sRevStrData := sRevStrData + ';' +  UTF8Decode(mIdHTTP.Response.RawHeaders.Values['Set-Cookie']) ;
+      if mIdHTTP.ResponseCode=200 then
+      begin
+        RevStrData:= sRevStrData;
+        Result:= True;
+      end
+      else
+        Result := False;
+    except
+      Result := false;
+    end;
+ finally
+    mIdHTTP.Free;
+    SendStream.Free;
+ end;
+end;
+
+function HttpPut(Const AURL,AParam:String;var RevStrData:String):Boolean;
+var
+  mIdHTTP:TIdcustomHTTP;
+  sRevStrData:String;
+  SendStream: TStringStream;
+begin
+  if(Length(AURL)<=0)Then begin Result:=False;Exit;end;
+  mIdHTTP:=TIdhttp.Create(nil);
+  SendStream:=TStringStream.Create(AnsiToUtf8(AParam));
+  try
+    mIdHTTP := TIdHTTP.Create(nil);
+    mIdHTTP.HandleRedirects := true;
+    mIdHTTP.ReadTimeout := 3000;
+    mIdHTTP.Request.Accept := 'text/javascript';
+    mIdHTTP.Request.ContentType := 'application/json;charset=UTF-8';
+    mIdHTTP.Request.ContentEncoding := 'utf-8';
+    try
+      sRevStrData := mIdHTTP.Put(TIdURI.URLEncode(AURL),SendStream);
+
+      if mIdHTTP.ResponseCode=200 then
+      begin
+        RevStrData:= sRevStrData;
+        Result:= True;
+      end
+      else
+        Result := False;
+    except
+      Result := false;
+    end;
+ finally
+    mIdHTTP.Free;
+    SendStream.Free;
+ end;
+end;
+
+function HttpGet(Const AUrl:String;var RevData:TMemoryStream):Boolean;
+var
+  mHttp: TIdcustomHTTP;
+begin
+  mHttp := TIdHTTP.Create(nil);
+  try
+    mHttp.HandleRedirects := true;
+    mHttp.ReadTimeout := 5000;
+    mHttp.Request.ContentType := 'application/x-www-form-urlencoded';
+
+    mHttp.Get(TIdURI.URLEncode(AUrl),RevData);
+    if mHttp.ResponseCode=200 then
+    begin
+      Result:= True;
+    end
+    else
+      Result := False;
+
+  finally
+    mHttp.Free;
+  end;
+end;
+
+function HttpDelete(Const AURL:String):Boolean;
+var
+  mIdHTTP:TIdcustomHTTP;
+begin
+  if(Length(AURL)<=0)Then
+  begin
+     Result := False;
+     Exit;
+  end;
+  mIdHTTP:=TIdhttp.Create(nil);
+  try
+    mIdHTTP := TIdHTTP.Create(nil);
+    mIdHTTP.HandleRedirects := true;
+    mIdHTTP.ReadTimeout := 3000;
+    mIdHTTP.Request.Accept := 'text/javascript';
+    mIdHTTP.Request.ContentType := 'application/json;charset=UTF-8';
+    mIdHTTP.Request.ContentEncoding := 'utf-8';
+    try
+       mIdHTTP.Delete(TIdURI.URLEncode(AURL));
+      if mIdHTTP.ResponseCode=200 then
+      begin
+        Result:= True;
+      end
+      else
+        Result := False;
+    except
+      Result := false;
+    end;
+ finally
+    mIdHTTP.Free;
+ end;
+end;
+//******************************************************************************************************************//
+//更换字符串
+function Replacing(const S,OldPattern,NewPattern:String):String;
+begin
+  Result:=StringReplace(S,OldPattern,NewPattern,[rfReplaceAll, rfIgnoreCase]);
+end;
+
+
+function ConvertState(state:Integer):Integer;
+Var
+    res:Integer;
+begin
+    case state of
+       0:  res:=  CHECK_STATE_WAIT;
+       1:  res := CHECK_STATE_DONE;
+       2:  res := CHECK_STATE_DEAL;
+       3:  res := CHECK_STATE_REJECT;
+       else  res := CHECK_STATE_ALL;
+    end;
+    result:=res;
+end;
+
+function ConvertToState(state:String):Integer;
+Var
+    res:Integer;
+begin
+    if (state  = '未处理') then  res:=  CHECK_STATE_WAIT
+    else if(state  = '已审核') then  res := CHECK_STATE_DONE
+    else if(state  = '已处理') then  res := CHECK_STATE_DEAL
+    else if(state  =  '已拒绝') then  res := CHECK_STATE_REJECT
+    else  res:=  CHECK_STATE_WAIT;
+    result:=res;
+end;
+
+function WorkLogRecord(strContent:String;fileName:String = LOG_DOWNLOAD):Boolean;
+Var
+    tFile:TextFile;
+    path:String;
+begin
+  try
+    try
+        path := ExtractFilePath(ParamStr(0)) + LOG_DIR + '\' + fileName + '\' + FormatDateTime('yyyyMMdd', Now) + '.txt';
+        if not DirectoryExists(ExtractFilePath(ParamStr(0)) + LOG_DIR + '\' + fileName) then
+        begin
+          MkDir(ExtractFilePath(ParamStr(0)) + LOG_DIR + '\' + fileName);
+        end;
+        AssignFile(tFile, path);
+        if FileExists(path)  then Append(tFile)
+        else Rewrite(tFile);
+        Writeln(tFile,strContent + '  ' + FormatDateTime('yyyy-MM-dd hh:nn:ss', Now));
+        Result:= true;
+    finally
+        CloseFile(tFile);
+    end;
+  except
+     on e:exception do
+      begin
+          Result := false;
+      end;
+  end;
+end;
+
+procedure WriteAccess(strAccess:String);
+var
+ ini:TIniFile;
+begin
+  ini:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+  try
+     ini.WriteString('System','DefaultAccess',strAccess);
+  finally
+     ini.Free;
+  end;
+end;
+
+function ReadAccess():String;
+var
+ ini:TIniFile;
+begin
+  ini:=TIniFile.Create(ChangeFileExt(ParamStr(0),'ini'));
+  try
+     result :=ini.ReadString('System','DefaultAccess','');
+  finally
+     ini.Free;
+  end;
+end;
+end.
